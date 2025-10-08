@@ -15,51 +15,147 @@ class AccountController extends Controller
         return view('front.account.registration');
     }
 
+    // public function processRegistration(Request $request)
+    // {
+    //     // Validate input
+    //     $request->validate([
+    //         'name'              => 'required|string|max:255',
+    //         'email'             => 'required|email|unique:users,email',
+    //         'password'          => 'required|min:5|same:confirm_password',
+    //         'confirm_password'  => 'required|min:5',
+    //     ]);
+
+    //     try {
+    //         // Begin transaction
+    //         DB::beginTransaction();
+
+    //         // Insert data into 'users' table
+    //         $insertId = DB::table('users')->insertGetId([
+    //             'name'       => $request->name,
+    //             'email'      => $request->email,
+    //             'password'   => Hash::make($request->password),
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ]);
+
+    //         // Commit transaction
+    //         DB::commit();
+
+    //         // Flash message
+    //         session()->flash('success', 'You have registered successfully. (User ID: ' . $insertId . ')');
+
+    //         // Return success JSON
+    //         return response()->json([
+    //             'status' => true,
+    //             'errors' => [],
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         // Rollback on error
+    //         DB::rollBack();
+
+    //         // Log error for debugging
+    //         Log::error('User registration failed: ' . $e->getMessage());
+
+    //         // Return error response
+    //         return response()->json([
+    //             'status' => false,
+    //             'errors' => ['general' => 'Registration failed. Please try again later.'],
+    //         ]);
+    //     }
+    // }
+
     public function processRegistration(Request $request)
     {
-        // Validate input
-        $request->validate([
-            'name'              => 'required|string|max:255',
-            'email'             => 'required|email|unique:users,email',
-            'password'          => 'required|min:5|same:confirm_password',
-            'confirm_password'  => 'required|min:5',
-        ]);
-
         try {
-            // Begin transaction
+            // Step 1: Basic validation rules for all users
+            $rules = [
+                'name'             => 'required|string|max:255',
+                'email'            => 'required|email|unique:users,email',
+                'password'         => 'required|min:5|same:confirm_password',
+                'confirm_password' => 'required|min:5',
+            ];
+
+            // Step 2: Additional validation if the user is a doctor
+            if ($request->has('is_doctor') && $request->is_doctor == 'on') {
+                $rules = array_merge($rules, [
+                    'license_number'   => 'required|string|max:50|unique:tbl_doctor,license_number',
+                    'license_image'    => 'required|file|mimes:jpeg,jpg,png,pdf|max:2048', // 2MB limit
+                    'qualification'    => 'required|string|max:255',
+                    'specialization'   => 'required|string|max:100',
+                    'years_experience' => 'nullable|integer|min:0',
+                    'clinic_name'      => 'nullable|string|max:255',
+                ]);
+            }
+
+            // Step 3: Validate input
+            $validator = Validator::make($request->all(), $rules);
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'errors' => $validator->errors(),
+                ]);
+            }
+
+            // Step 4: Start DB transaction
             DB::beginTransaction();
 
-            // Insert data into 'users' table
-            $insertId = DB::table('users')->insertGetId([
+            // Step 5: Insert into users table
+            $userId = DB::table('users')->insertGetId([
                 'name'       => $request->name,
                 'email'      => $request->email,
                 'password'   => Hash::make($request->password),
+                'role'       => $request->has('is_doctor') ? 'doctor' : 'patient',
                 'created_at' => now(),
-                'updated_at' => now(),
             ]);
 
-            // Commit transaction
+            // Step 6: If doctor, insert doctor-specific details
+            if ($request->has('is_doctor') && $request->is_doctor == 'on') {
+                $licenseImagePath = null;
+
+                // Handle file upload
+                if ($request->hasFile('license_image')) {
+                    $file = $request->file('license_image');
+                    $filename = time() . "_doctor_" . $userId . "." . $file->getClientOriginalExtension();
+                    $licenseImagePath = $file->storeAs('doctor_licenses', $filename, 'public');
+                }
+
+                // Insert into tbl_doctor table
+                DB::table('tbl_doctor')->insert([
+                    'doctor_id'        => $userId,
+                    'doctor_name'      => $request->name,
+                    'license_number'   => $request->license_number,
+                    'license_image'    => $licenseImagePath,
+                    'qualification'    => $request->qualification,
+                    'specialization'   => $request->specialization,
+                    'years_experience' => $request->years_experience,
+                    'clinic_name'      => $request->clinic_name,
+                    // 'created_at'       => now(),
+                    // 'updated_at'       => now(),
+                ]);
+            }
+
+            // Step 7: Commit DB transaction
             DB::commit();
 
-            // Flash message
-            session()->flash('success', 'You have registered successfully. (User ID: ' . $insertId . ')');
+            // Step 8: Flash and respond
+            $message = $request->has('is_doctor')
+                ? 'You have registered successfully as a doctor. Your account is pending verification.'
+                : 'You have registered successfully as a patient.';
 
-            // Return success JSON
+            session()->flash('success', $message);
+
             return response()->json([
                 'status' => true,
-                'errors' => [],
+                'message' => $message,
             ]);
+
         } catch (\Exception $e) {
-            // Rollback on error
             DB::rollBack();
+            Log::error('Registration failed: ' . $e->getMessage());
 
-            // Log error for debugging
-            Log::error('User registration failed: ' . $e->getMessage());
-
-            // Return error response
             return response()->json([
                 'status' => false,
-                'errors' => ['general' => 'Registration failed. Please try again later.'],
+                'errors' => ['general' => 'Something went wrong. Please try again later.'],
             ]);
         }
     }
@@ -67,6 +163,61 @@ class AccountController extends Controller
     public function login() {
         return view('front.account.login');
     }
+
+    // public function authenticate(Request $request)
+    // {
+    //     // Step 1: Validate input
+    //     $validator = Validator::make($request->all(), [
+    //         'email'    => 'required|email',
+    //         'password' => 'required',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return redirect()->route('account.login')
+    //             ->withErrors($validator)
+    //             ->withInput($request->only('email'));
+    //     }
+
+    //     try {
+    //         // Step 2: Fetch user record from DB
+    //         $user = DB::table('users')->where('email', $request->email)->first();
+
+    //         if (!$user) {
+    //             Log::warning('Login failed: user not found', ['email' => $request->email]);
+    //             return redirect()->route('account.login')
+    //                 ->with('error', 'Either Email/Password is incorrect');
+    //         }
+
+    //         // Step 3: Check password manually
+    //         if (!Hash::check($request->password, $user->password)) {
+    //             Log::warning('Login failed: incorrect password', ['email' => $request->email]);
+    //             return redirect()->route('account.login')
+    //                 ->with('error', 'Either Email/Password is incorrect');
+    //         }
+
+    //         // Step 4: Log in the user manually
+    //         Auth::loginUsingId($user->id);
+
+    //         Log::info('User authenticated successfully', ['email' => $user->email, 'role' => $user->role]);
+
+    //         // Step 5: Redirect based on role
+    //         switch ($user->role) {
+    //             case 'admin':
+    //                 return redirect()->route('admin.dashboard');
+    //             case 'doctor':
+    //                 return redirect()->route('doctor.dashboard');
+    //             default:
+    //                 return redirect()->route('account.profile');
+    //         }
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Authentication error: ' . $e->getMessage());
+
+    //         return redirect()->route('account.login')
+    //             ->with('error', 'An unexpected error occurred. Please try again.');
+    //     }
+    // }
+    
 
     public function authenticate(Request $request)
     {
@@ -83,7 +234,7 @@ class AccountController extends Controller
         }
 
         try {
-            // Step 2: Fetch user record from DB
+            // Step 2: Fetch user record
             $user = DB::table('users')->where('email', $request->email)->first();
 
             if (!$user) {
@@ -99,12 +250,30 @@ class AccountController extends Controller
                     ->with('error', 'Either Email/Password is incorrect');
             }
 
-            // Step 4: Log in the user manually
-            Auth::loginUsingId($user->id);
+            // 🩺 Step 4: Extra check for doctor approval
+            if ($user->role === 'doctor') {
+                $doctor = DB::table('tbl_doctor')
+                    ->where('doctor_id', $user->id)
+                    ->first();
 
+                if (!$doctor) {
+                    Log::warning('Doctor record not found', ['user_id' => $user->id]);
+                    return redirect()->route('account.login')
+                        ->with('error', 'Doctor record not found. Please contact admin.');
+                }
+
+                if ($doctor->is_admin_confirmed != 1) {
+                    Log::info('Doctor login blocked (not approved yet)', ['email' => $user->email]);
+                    return redirect()->route('account.login')
+                        ->with('error', 'Your account is pending admin approval. Please wait.');
+                }
+            }
+
+            // Step 5: Log in user
+            Auth::loginUsingId($user->id);
             Log::info('User authenticated successfully', ['email' => $user->email, 'role' => $user->role]);
 
-            // Step 5: Redirect based on role
+            // Step 6: Redirect based on role
             switch ($user->role) {
                 case 'admin':
                     return redirect()->route('admin.dashboard');
@@ -121,7 +290,7 @@ class AccountController extends Controller
                 ->with('error', 'An unexpected error occurred. Please try again.');
         }
     }
-    
+
     
     
 

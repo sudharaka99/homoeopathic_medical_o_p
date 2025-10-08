@@ -10,6 +10,7 @@
                 <div class="card shadow border-0 p-5">
                     <h1 class="h3">Register</h1>
                     <form action="" name="registrationForm" id="registrationForm" enctype="multipart/form-data">
+                        @csrf
                         <div class="mb-3">
                             <label for="name" class="mb-2">Name*</label>
                             <input type="text" name="name" id="name" class="form-control" placeholder="Enter Name">

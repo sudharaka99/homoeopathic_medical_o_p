@@ -1,6 +1,5 @@
 
 @if(session('success'))
-    {{-- <div class="alert alert-success">{{ session('success') }}</div> --}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         Swal.fire({
@@ -13,7 +12,6 @@
 </script>
 @endif
 @if(session('error'))
-    {{-- <div class="alert alert-danger">{{ session('error') }}</div> --}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         Swal.fire({
