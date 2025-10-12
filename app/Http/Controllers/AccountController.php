@@ -11,8 +11,14 @@ use Illuminate\Support\Facades\Log;
 
 class AccountController extends Controller
 {
-     public function registration() {
-        return view('front.account.registration');
+     public function registration() 
+    {
+
+        $specializations = DB::table('tbl_specializations')
+            ->where('is_active', 1)
+            ->get();
+
+        return view('front.account.registration', compact('specializations'));
     }
 
     // public function processRegistration(Request $request)

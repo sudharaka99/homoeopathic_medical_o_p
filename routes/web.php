@@ -56,11 +56,14 @@ Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.d
 //doctor
 Route::get('/doctor/dashboard', [DoctorController::class, 'index'])->name('doctor.dashboard');
 Route::get('/doctor/profile', [DoctorController::class, 'profile'])->name('doctor.profile');
+Route::get('/doctor/{id}', [DoctorController::class, 'doctorDetailsShow'])->name('doctor.details');
+Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])->name('doctor.feedback');
 
 
 
 
 // patient
+
 
 
 // Route::get('/', function () {

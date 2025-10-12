@@ -66,13 +66,10 @@
                             <div class="mb-3">
                                 <label for="specialization" class="mb-2">Specialization*</label>
                                 <select name="specialization" id="specialization" class="form-control">
-                                    <option value="">Select Specialization</option>
-                                    <option value="General Homoeopathy">General Homoeopathy</option>
-                                    <option value="Pediatrics">Pediatrics</option>
-                                    <option value="Dermatology">Dermatology</option>
-                                    <option value="Gynecology">Gynecology</option>
-                                    <option value="Psychiatry">Psychiatry</option>
-                                    <option value="Other">Other</option>
+                                 <option value="">-- Select Specialization --</option>
+                                    @foreach ($specializations as $specialization)
+                                        <option value="{{ $specialization->id }}">{{ $specialization->name }}</option>
+                                    @endforeach
                                 </select>
                                 <p></p>
                             </div>
