@@ -2,7 +2,7 @@
 <html class="no-js" lang="en_AU" />
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<title>CareerVibe | Find Best Jobs</title>
+	<title>Healing Touch Homeopathy | Find Best Doctor</title>
 	<meta name="description" content="" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1, user-scalable=no" />
 	<meta name="HandheldFriendly" content="True" />
@@ -13,6 +13,8 @@
     <link rel="stylesheet" type="text/css" href="{{asset('assets/css/style.css')}}" />
 	<!-- Fav Icon -->
 	<link rel="shortcut icon" type="image/x-icon" href="#" />
+
+
 
 	
 </head>
@@ -38,8 +40,6 @@
 								<a class="nav-link" href="{{ route('admin.dashboard') }}">Dashboard</a>
 							@elseif(Auth::user()->role === 'doctor')
 								<a class="nav-link" href="{{ route('doctor.dashboard') }}">Dashboard</a>
-							@elseif(Auth::user()->role === 'patient')
-								<a class="nav-link" href="{{ route('account.profile') }}">Dashboard</a>
 							@endif
 						@endif
 					</li>
@@ -137,14 +137,13 @@
     <p class="text-center text-white pt-3 fw-bold fs-6">Copyright© 2025 JRS Sudharaka, All right reserved</p>
 </div>
 </footer> 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{asset('assets/js/jquery-3.6.0.min.js')}}"></script>
 <script src="{{asset('assets/js/bootstrap.bundle.5.1.3.min.js')}}"></script>
 <script src="{{asset('assets/js/instantpages.5.1.0.min.js')}}"></script>
 <script src="{{asset('assets/js/lazyload.17.6.0.min.js')}}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Trumbowyg/2.27.3/trumbowyg.min.js" integrity="sha512-YJgZG+6o3xSc0k5wv774GS+W1gx0vuSI/kr0E0UylL/Qg/noNspPtYwHPN9q6n59CTR/uhgXfjDXLTRI+uIryg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="{{asset('assets/js/custom.js')}}"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 $('.textarea').trumbowyg();

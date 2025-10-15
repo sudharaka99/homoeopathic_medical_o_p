@@ -22,13 +22,13 @@
         <div class="row">
             {{-- Left side --}}
             <div class="col-md-8">
-                @include('front.message')
+                {{-- @include('front.message') --}}
 
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center mb-4">
                             <img 
-                                src="{{ $doctor->image ? asset($doctor->image) : asset('assets/images/default-doctor.png') }}" 
+                                src="{{ $doctor->image ? asset($doctor->image) : asset('assets/images/doctor.png') }}" 
                                 class="rounded-circle me-3 border" 
                                 width="120" 
                                 height="120" 
@@ -75,9 +75,21 @@
 
                         <div class="text-end">
                             @if(Auth::check())
-                                <button onclick="saveDoctor({{ $doctor->id }})" class="btn btn-outline-primary" id="saveDoctorBtn">
-                                    <i class="fa fa-heart me-1"></i> <span>Save Doctor</span>
-                                </button>
+                                @php
+                                    $isSaved = false;
+                                    $savedNote = '';
+                                    // Check if doctor is already saved (you need to implement this logic)
+                                @endphp
+                                @if($isSaved)
+                                    <button class="btn btn-success" disabled>
+                                        <i class="fa fa-heart me-1"></i> Saved
+                                    </button>
+                                    <small class="d-block text-muted mt-1">Reason: {{ $savedNote ?: 'No reason provided' }}</small>
+                                @else
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#saveDoctorModal">
+                                        <i class="fa fa-heart me-1"></i> Save Doctor
+                                    </button>
+                                @endif
                             @else
                                 <a href="{{ route('account.login', ['redirect' => url()->current()]) }}" class="btn btn-outline-primary" aria-label="Login to save doctor profile">
                                     <i class="fa fa-heart me-1"></i> Login to Save
@@ -187,6 +199,67 @@
         </div>
     </div>
 
+    {{-- Save Doctor Modal --}}
+    <div class="modal fade" id="saveDoctorModal" tabindex="-1" aria-labelledby="saveDoctorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="saveDoctorModalLabel">Save Doctor to Your List</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="saveDoctorForm">
+                        @csrf
+                        <input type="hidden" name="doctor_id" value="{{ $doctor->id }}">
+                        
+                        <div class="mb-3">
+                            <label for="save_reason" class="form-label">Why do you want to save this doctor? <span class="text-muted">(Optional)</span></label>
+                            <textarea 
+                                class="form-control" 
+                                id="save_reason" 
+                                name="save_reason" 
+                                rows="4" 
+                                placeholder="e.g., Great specialist for my condition, Planning to consult soon, Recommended by friend, etc."
+                                maxlength="500"
+                            ></textarea>
+                            <div class="form-text">
+                                <span id="charCount">0</span>/500 characters
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Save as:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="save_category" id="category_favorite" value="favorite" checked>
+                                <label class="form-check-label" for="category_favorite">
+                                    <i class="fa fa-heart text-danger me-1"></i> Favorite
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="save_category" id="category_consult" value="consult_later">
+                                <label class="form-check-label" for="category_consult">
+                                    <i class="fa fa-calendar text-primary me-1"></i> Plan to Consult
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="save_category" id="category_reference" value="reference">
+                                <label class="form-check-label" for="category_reference">
+                                    <i class="fa fa-bookmark text-warning me-1"></i> For Reference
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmSaveDoctor">
+                        <i class="fa fa-heart me-1"></i> Save Doctor
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Toast Notification --}}
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="saveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -198,7 +271,6 @@
         </div>
     </div>
 </section>
-
 @endsection
 
 @section('customCSS')
@@ -234,6 +306,10 @@
     background-color: #0056b3;
     border-color: #0056b3;
 }
+.form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
 @media (max-width: 576px) {
     .d-flex.align-items-center.mb-4 img {
         width: 80px;
@@ -249,39 +325,68 @@
 @section('customJS')
 <script type="text/javascript">
 $(document).ready(function() {
-    // Save Doctor Function
-    window.saveDoctor = function(id) {
-        const saveBtn = $('#saveDoctorBtn');
-        const saveIcon = saveBtn.find('.fa-heart');
-        const saveText = saveBtn.find('span');
-        const toast = new bootstrap.Toast(document.getElementById('saveToast'));
-        const toastBody = $('#saveToast .toast-body');
+    // Character counter for save reason
+    $('#save_reason').on('input', function() {
+        const length = $(this).val().length;
+        $('#charCount').text(length);
+        if (length > 500) {
+            $('#charCount').addClass('text-danger');
+        } else {
+            $('#charCount').removeClass('text-danger');
+        }
+    });
 
-        saveIcon.addClass('fa-spin');
-        saveBtn.prop('disabled', true);
+    // Save Doctor Function with Modal
+    $('#confirmSaveDoctor').on('click', function() {
+        const saveBtn = $(this);
+        const formData = new FormData(document.getElementById('saveDoctorForm'));
+        const modal = bootstrap.Modal.getInstance(document.getElementById('saveDoctorModal'));
+
+        saveBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Saving...');
 
         $.ajax({
-            url: '',
+            url: '{{ route("patient.saveDoctor") }}',
             type: 'POST',
-            data: { id: id, _token: '{{ csrf_token() }}' },
+            data: formData,
+            processData: false,
+            contentType: false,
             dataType: 'json',
             success: function(response) {
-                saveIcon.removeClass('fa-spin').removeClass('fa-heart').addClass('fa-heart-fill text-danger');
-                saveText.text('Doctor Saved');
-                toastBody.text(response.message || 'Doctor saved successfully!');
-                $('#saveToast').addClass('text-bg-success');
-                toast.show();
-                setTimeout(() => window.location.reload(), 2000);
+                modal.hide();
+                
+                if (response.status === 'success' || response.status === true) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.message || 'Doctor saved successfully!',
+                        icon: 'success',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Oops!',
+                        text: response.message || 'Failed to save doctor.',
+                        icon: 'warning',
+                        confirmButtonColor: '#3085d6',
+                    });
+                    saveBtn.prop('disabled', false).html('<i class="fa fa-heart me-1"></i> Save Doctor');
+                }
             },
             error: function(xhr) {
-                saveIcon.removeClass('fa-spin');
-                saveBtn.prop('disabled', false);
-                toastBody.text(xhr.responseJSON?.message || 'Failed to save doctor. Please try again.');
-                $('#saveToast').addClass('text-bg-danger');
-                toast.show();
+                modal.hide();
+                Swal.fire({
+                    title: 'Error!',
+                    text: xhr.responseJSON?.message || 'An unexpected error occurred. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#d33',
+                });
+                saveBtn.prop('disabled', false).html('<i class="fa fa-heart me-1"></i> Save Doctor');
             }
         });
-    };
+    });
+
 
     // Feedback Form Submission
     $('#feedbackForm').on('submit', function(e) {
@@ -320,6 +425,14 @@ $(document).ready(function() {
                 submitBtn.prop('disabled', false);
             }
         });
+    });
+
+    // Reset modal when closed
+    $('#saveDoctorModal').on('hidden.bs.modal', function() {
+        $('#save_reason').val('');
+        $('#charCount').text('0');
+        $('input[name="save_category"][value="favorite"]').prop('checked', true);
+        $('#confirmSaveDoctor').prop('disabled', false).html('<i class="fa fa-heart me-1"></i> Save Doctor');
     });
 });
 </script>

@@ -63,6 +63,7 @@ Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])
 
 
 // patient
+Route::post('/patient/save-doctor', [PatientController::class, 'saveDoctor'])->name('patient.saveDoctor');
 
 
 

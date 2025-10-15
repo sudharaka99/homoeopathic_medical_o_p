@@ -110,7 +110,7 @@
             <div class="card border-0 p-3 shadow mb-4">
               <div class="card-body text-center">
                 <img 
-                  src="{{ $doctor->image ? asset($doctor->image) : asset('assets/images/default-doctor.png') }}" 
+                  src="{{ $doctor->image ? asset($doctor->image) : asset('assets/images/doctor.png') }}" 
                   class="rounded-circle mb-3" width="90" height="90" alt="Doctor Image">
 
                 <h4 class="mb-1">{{ $doctor->doctor_name }}</h4>
@@ -146,7 +146,7 @@
             <div class="card border-0 p-3 shadow mb-4">
               <div class="card-body text-center">
                 <img 
-                  src="{{ $doctor->image ? asset($doctor->image) : asset('assets/images/default-doctor.png') }}" 
+                  src="{{ $doctor->image ? asset($doctor->image) : asset('assets/images/doctor.png') }}" 
                   class="rounded-circle mb-3" width="90" height="90" alt="Doctor Image">
 
                 <h4 class="mb-1">{{ $doctor->doctor_name }}</h4>
