@@ -16,26 +16,21 @@
                 </div>
                 <div class="card account-nav border-0 shadow mb-4 mb-lg-0">
                     <div class="card-body p-0">
-                        <ul class="list-group list-group-flush ">
-                            <li class="list-group-item d-flex justify-content-between p-3">
-                                <a href="{{route('account.profile')}}">Account Settings</a>
-                            </li>
-                            {{-- <li class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                <a href="{{route('account.createJob')}}">Post a Job</a>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                <a href="{{route('account.myJobs')}}">My Jobs</a>
-                            </li> --}}
-                            <li class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                <a href="">Booked Appointment</a>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                <a href="">Saved Doctors</a>
-                            </li>    
-                            <li class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                <a href="{{route('account.logout')}}"> Logout</a>
-                            </li>                                                     
-                        </ul>
+                    <ul class="list-group list-group-flush">
+    <li class="list-group-item d-flex justify-content-between p-3">
+        <a href="{{ route('account.profile') }}">Account Settings</a>
+    </li>
+    <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+        <a href="">Booked Appointment</a>
+    </li>
+    <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+        <a href="{{ route('account.savedDoctors', ['id' => Auth::id()]) }}">Saved Doctors</a>
+    </li>    
+    <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+        <a href="{{ route('account.logout') }}"> Logout</a>
+    </li>                                                     
+</ul>
+
                     </div>
                 </div>
             

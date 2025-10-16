@@ -78,7 +78,7 @@
 					@elseif($userRole === 'doctor')
 						<a class="btn btn-outline-primary me-2" href="{{ route('doctor.profile') }}" type="submit">Account</a>
 					@else
-						<a class="btn btn-outline-primary me-2" href="" type="submit">Account</a>
+						<a class="btn btn-outline-primary me-2" href="{{ route('account.profile') }}" type="submit">Account</a>
 					@endif
 
 

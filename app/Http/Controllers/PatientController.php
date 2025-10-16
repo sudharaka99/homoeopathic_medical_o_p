@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
+use App\Models\User;
+
 class PatientController extends Controller
 {
     public function saveDoctor(Request $request)
@@ -72,4 +74,37 @@ class PatientController extends Controller
 
         }
     }
+
+public function savedDoctors()
+{
+    $userId = Auth::id(); // always current user
+
+    $savedDoctors = DB::table('tbl_saved_doctors as sd')
+        ->join('tbl_doctor as d', 'sd.doctor_id', '=', 'd.id')
+        ->join('users as u', 'd.doctor_id', '=', 'u.id')
+        ->leftJoin('tbl_specializations as s', 'd.specialization', '=', 's.id')
+        ->where('sd.user_id', $userId)
+        ->select(
+            'sd.id as saved_id',
+            'd.id as doctor_id',
+            'd.doctor_name',
+            'u.profile_photo_path',
+            'd.qualification',
+            'd.years_experience',
+            's.name as specialization',
+            'd.clinic_name',
+            'sd.save_reason',
+            'sd.save_category',
+            'sd.created_at'
+        )
+        ->orderBy('sd.created_at', 'desc')
+        ->paginate(10);
+
+    return view('front.account.doctor.savedDoctor', compact('savedDoctors'));
 }
+
+}
+
+
+
+
