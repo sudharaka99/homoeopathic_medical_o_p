@@ -11,6 +11,7 @@
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" />
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Trumbowyg/2.27.3/ui/trumbowyg.min.css" integrity="sha512-Fm8kRNVGCBZn0sPmwJbVXlqfJmPC13zRsMElZenX6v721g/H7OukJd8XzDEBRQ2FSATK8xNF9UYvzsCtUpfeJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" type="text/css" href="{{asset('assets/css/style.css')}}" />
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 	<!-- Fav Icon -->
 	<link rel="shortcut icon" type="image/x-icon" href="#" />
 
@@ -45,13 +46,11 @@
 					</li>
 	
 					<li class="nav-item">
-						<a class="nav-link" aria-current="page" href="">Find Doctors</a>
-					</li>
-					<li class="nav-item">
-						@if(Auth::check() && Auth::user()->role === 'employee')
-							<a class="nav-link" aria-current="page" href="">Skill Development</a>
+						@if(Auth::check() && in_array(Auth::user()->role, ['patient', 'admin']))
+							<a class="nav-link" aria-current="page" href="{{ route('patient.findDoctors') }}">Find Doctors</a>
 						@endif
 					</li>
+
 					<li class="nav-item">
 						@if(Auth::check() && Auth::user()->role === 'employee')
 							<a class="nav-link" aria-current="page" href="">Counselling</a>

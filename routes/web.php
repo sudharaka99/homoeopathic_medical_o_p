@@ -56,17 +56,29 @@ Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.d
 //doctor
 Route::get('/doctor/dashboard', [DoctorController::class, 'index'])->name('doctor.dashboard');
 Route::get('/doctor/profile', [DoctorController::class, 'profile'])->name('doctor.profile');
-Route::get('/doctor/{id}', [DoctorController::class, 'doctorDetailsShow'])->name('doctor.details');
-Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])->name('doctor.feedback');
+// Route::get('/doctor/add-availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
 
+
+    Route::get('/add-availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
+    Route::post('/availability/store', [DoctorController::class, 'storeAvailability'])->name('doctor.availability.store');
+    Route::get('/manage-availability', [DoctorController::class, 'manageAvailability'])->name('doctor.manageAvailability');
+    Route::delete('/availability/delete/{id}', [DoctorController::class, 'deleteAvailability'])->name('doctor.availability.delete');
+Route::get('/doctor/edit-availability/{id}', [DoctorController::class, 'editAvailability'])->name('doctor.editAvailability');
+Route::put('/doctor/availability/update/{id}', [DoctorController::class, 'updateAvailability'])->name('doctor.availability.update');
+
+
+
+
+Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])->name('doctor.feedback');
+Route::get('/doctor/{id}', [DoctorController::class, 'doctorDetailsShow'])->name('doctor.details');
 
 
 
 // patient
 Route::post('/patient/save-doctor', [PatientController::class, 'saveDoctor'])->name('patient.saveDoctor');
 Route::get('/account/saved-doctors/{id}', [PatientController::class, 'savedDoctors'])->name('account.savedDoctors');
-
-
+Route::get('/patient/find-doctors', [PatientController::class, 'findDoctors'])->name('patient.findDoctors');
+Route::get('/create-appointment/{id}', [PatientController::class, 'createAppointment'])->name('patient.bookAppointment');
 
 // Route::get('/', function () {
 //     return view('welcome');
