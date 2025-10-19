@@ -109,9 +109,19 @@
                                             <div class="d-grid mt-3">
                                                 <a href="{{route('doctor.details',$doctor->id)}}" class="btn btn-primary btn-lg">View Profile</a>
                                                 @if(Auth::check())
-                                                    <button onclick="saveDoctor({{ $doctor->id }})" class="btn btn-outline-primary mt-2" id="saveDoctorBtn-{{ $doctor->id }}">
-                                                        <i class="fa fa-heart me-1"></i> Save Doctor
-                                                    </button>
+                                                    @if($doctor->is_saved)
+                                                        <button class="btn btn-success mt-2" disabled>
+                                                            <i class="fa fa-heart me-1"></i> Saved Doctor
+                                                        </button>
+                                                    @else
+                                                        <button type="button" class="btn btn-outline-primary mt-2" 
+                                                                data-bs-toggle="modal" 
+                                                                data-bs-target="#saveDoctorModal"
+                                                                data-doctor-id="{{ $doctor->id }}"
+                                                                data-doctor-name="{{ $doctor->doctor_name }}">
+                                                            <i class="fa fa-heart me-1"></i> Save Doctor
+                                                        </button>
+                                                    @endif
                                                 @else
                                                     <a href="{{ route('account.login', ['redirect' => url()->current()]) }}" class="btn btn-outline-primary mt-2">
                                                         <i class="fa fa-heart me-1"></i> Login to Save
@@ -145,9 +155,81 @@
     </div>
 </section>
 
+<!-- Save Doctor Modal -->
+<div class="modal fade" id="saveDoctorModal" tabindex="-1" aria-labelledby="saveDoctorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="saveDoctorModalLabel">
+                    <i class="fa fa-heart text-danger me-2"></i> Save Doctor to Your List
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="saveDoctorForm">
+                    @csrf
+                    <input type="hidden" name="doctor_id" id="modal_doctor_id">
+                    
+                    <div class="mb-4">
+                        <p class="text-muted mb-3">You are saving: <strong id="doctorNameDisplay"></strong></p>
+                        
+                        <label for="save_reason" class="form-label fw-bold">
+                            Why do you want to save this doctor? 
+                            <span class="text-muted fw-normal">(Optional)</span>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="save_reason" 
+                            name="save_reason" 
+                            rows="4" 
+                            placeholder="e.g., Great specialist for my condition, Planning to consult soon, Recommended by friend, etc."
+                            maxlength="500"
+                        ></textarea>
+                        <div class="form-text mt-2">
+                            <span id="charCount">0</span>/500 characters
+                        </div>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <label class="form-label fw-bold mb-3">Save as:</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="save_category" id="category_favorite" value="favorite" checked>
+                            <label class="form-check-label" for="category_favorite">
+                                <i class="fa fa-heart text-danger me-2"></i> Favorite
+                            </label>
+                            <small class="text-muted d-block ms-4">For doctors you prefer</small>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="save_category" id="category_consult" value="consult_later">
+                            <label class="form-check-label" for="category_consult">
+                                <i class="fa fa-calendar text-primary me-2"></i> Plan to Consult
+                            </label>
+                            <small class="text-muted d-block ms-4">For future consultations</small>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="save_category" id="category_reference" value="reference">
+                            <label class="form-check-label" for="category_reference">
+                                <i class="fa fa-bookmark text-warning me-2"></i> For Reference
+                            </label>
+                            <small class="text-muted d-block ms-4">For keeping as reference</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmSaveDoctor">
+                    <i class="fa fa-heart me-1"></i> Save Doctor
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('customJS')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $("#searchForm").submit(function(e){
         e.preventDefault();
@@ -174,36 +256,90 @@
         $("#searchForm").submit();
     });
 
-    // Save Doctor Function
-    function saveDoctor(doctorId) {
-        const saveBtn = $(`#saveDoctorBtn-${doctorId}`);
-        const saveIcon = saveBtn.find('.fa-heart');
-        const saveText = saveBtn.find('span');
-
-        saveIcon.addClass('fa-spin');
-        saveBtn.prop('disabled', true);
-
-        $.ajax({
-            url: '{{ route("patient.saveDoctor") }}',
-            type: 'POST',
-            data: { 
-                doctor_id: doctorId, 
-                _token: '{{ csrf_token() }}' 
-            },
-            dataType: 'json',
-            success: function(response) {
-                saveIcon.removeClass('fa-spin fa-heart').addClass('fa-heart text-danger');
-                saveText.text(' Saved');
-                saveBtn.removeClass('btn-outline-primary').addClass('btn-success');
-                alert(response.message || 'Doctor saved successfully!');
-            },
-            error: function(xhr) {
-                saveIcon.removeClass('fa-spin');
-                saveBtn.prop('disabled', false);
-                alert(xhr.responseJSON?.message || 'Failed to save doctor. Please try again.');
+    // Save Doctor Modal Functionality
+    $(document).ready(function() {
+        // Character counter for save reason
+        $('#save_reason').on('input', function() {
+            const length = $(this).val().length;
+            $('#charCount').text(length);
+            if (length > 500) {
+                $('#charCount').addClass('text-danger fw-bold');
+            } else {
+                $('#charCount').removeClass('text-danger fw-bold');
             }
         });
-    }
+
+        // Set doctor data when modal is shown
+        $('#saveDoctorModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const doctorId = button.data('doctor-id');
+            const doctorName = button.data('doctor-name');
+            
+            $('#modal_doctor_id').val(doctorId);
+            $('#doctorNameDisplay').text(doctorName);
+        });
+
+        // Reset modal when closed
+        $('#saveDoctorModal').on('hidden.bs.modal', function() {
+            $('#save_reason').val('');
+            $('#charCount').text('0');
+            $('input[name="save_category"][value="favorite"]').prop('checked', true);
+            $('#confirmSaveDoctor').prop('disabled', false).html('<i class="fa fa-heart me-1"></i> Save Doctor');
+        });
+
+        // Save Doctor Function with Modal
+        $('#confirmSaveDoctor').on('click', function() {
+            const saveBtn = $(this);
+            const formData = new FormData(document.getElementById('saveDoctorForm'));
+            const modal = bootstrap.Modal.getInstance(document.getElementById('saveDoctorModal'));
+
+            saveBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Saving...');
+
+            $.ajax({
+                url: '{{ route("patient.saveDoctor") }}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(response) {
+                    modal.hide();
+                    
+                    if (response.status === 'success' || response.status === true) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || 'Doctor saved successfully!',
+                            icon: 'success',
+                            confirmButtonColor: '#3085d6',
+                            confirmButtonText: 'OK',
+                            timer: 2000,
+                            timerProgressBar: true
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Oops!',
+                            text: response.message || 'Failed to save doctor.',
+                            icon: 'warning',
+                            confirmButtonColor: '#3085d6',
+                        });
+                        saveBtn.prop('disabled', false).html('<i class="fa fa-heart me-1"></i> Save Doctor');
+                    }
+                },
+                error: function(xhr) {
+                    modal.hide();
+                    Swal.fire({
+                        title: 'Error!',
+                        text: xhr.responseJSON?.message || 'An unexpected error occurred. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#d33',
+                    });
+                    saveBtn.prop('disabled', false).html('<i class="fa fa-heart me-1"></i> Save Doctor');
+                }
+            });
+        });
+    });
 </script>
 
 <style>
@@ -253,6 +389,16 @@
     .pagination .page-link:hover {
         background-color: #e9ecef;
         border-color: #dee2e6;
+    }
+
+    /* Modal Styles */
+    .modal-header {
+        background-color: #f8f9fa;
+    }
+    
+    .form-check-input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
     }
 </style>
 @endsection

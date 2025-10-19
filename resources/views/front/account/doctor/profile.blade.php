@@ -16,7 +16,7 @@
         </div>
         <div class="row">
             <div class="col-lg-3">
-                @include('front.account.slidebar')
+                @include('front.account.doctor.slidebar')
             </div>
             <div class="col-lg-9">
                 @include('front.message')

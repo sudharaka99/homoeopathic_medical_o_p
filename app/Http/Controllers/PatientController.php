@@ -138,8 +138,28 @@ class PatientController extends Controller
                 $query->where('d.specialization', $request->specialization);
             }
 
-            // Paginate with 12 items per page and preserve query string
+            // Get the doctors first
             $doctors = $query->paginate(10)->withQueryString();
+
+            // Check if each doctor is saved by current user
+            if (Auth::check()) {
+                $savedDoctorIds = DB::table('tbl_saved_doctors')
+                    ->where('user_id', Auth::id())
+                    ->pluck('doctor_id')
+                    ->toArray();
+
+                // Add is_saved flag to each doctor
+                $doctors->getCollection()->transform(function ($doctor) use ($savedDoctorIds) {
+                    $doctor->is_saved = in_array($doctor->id, $savedDoctorIds);
+                    return $doctor;
+                });
+            } else {
+                // For non-logged in users, set is_saved to false
+                $doctors->getCollection()->transform(function ($doctor) {
+                    $doctor->is_saved = false;
+                    return $doctor;
+                });
+            }
 
             $specializations = DB::table('tbl_specializations')
                 ->where('is_active', 1)
@@ -154,10 +174,40 @@ class PatientController extends Controller
         }
     }
 
-    public function createAppointment(Request $request , $id)
-    {
-        return view('front.bookAppointmentShow');
+    
+
+   public function createAppointment(Request $request, $id)
+{
+    try {
+        // Get doctor details
+        $doctor = DB::table('tbl_doctor as d')
+            ->join('users as u', 'd.doctor_id', '=', 'u.id')
+            ->select('d.*', 'u.name as doctor_name', 'u.email', 'u.mobile')
+            ->where('d.doctor_id', $id)
+            ->first();
+
+        if (!$doctor) {
+            return redirect()->route('patient.findDoctors')
+                ->with('error', 'Doctor not found.');
+        }
+
+        // Get availability list
+        $avalabilityList = DB::table('tbl_availability as da')
+            ->where('da.doctor_id', $id)
+            ->where('da.date', '>=', date('Y-m-d'))
+            ->where('status', 'available')
+            ->where('number_of_tokens', '>', 0)
+            ->orderBy('da.date', 'asc')
+            ->orderBy('da.start_time_slot', 'asc')
+            ->get();
+
+        return view('front.bookAppointmentShow', compact('avalabilityList', 'doctor'));
+
+    } catch (\Exception $e) {
+        Log::error('Error in createAppointment: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Failed to load appointment booking page.');
     }
+}
 
 }
 

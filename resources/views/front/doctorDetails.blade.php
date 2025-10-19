@@ -517,7 +517,6 @@ a:focus, button:focus, input:focus, textarea:focus {
 
 
 @section('customJS')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script type="text/javascript">
 // Define bookAppointment function globally (outside document.ready)
 function bookAppointment(doctorId) {

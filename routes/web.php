@@ -59,12 +59,11 @@ Route::get('/doctor/profile', [DoctorController::class, 'profile'])->name('docto
 // Route::get('/doctor/add-availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
 
 
-    Route::get('/add-availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
-    Route::post('/availability/store', [DoctorController::class, 'storeAvailability'])->name('doctor.availability.store');
-    Route::get('/manage-availability', [DoctorController::class, 'manageAvailability'])->name('doctor.manageAvailability');
-    Route::delete('/availability/delete/{id}', [DoctorController::class, 'deleteAvailability'])->name('doctor.availability.delete');
-Route::get('/doctor/edit-availability/{id}', [DoctorController::class, 'editAvailability'])->name('doctor.editAvailability');
-Route::put('/doctor/availability/update/{id}', [DoctorController::class, 'updateAvailability'])->name('doctor.availability.update');
+    Route::get('/doctor/availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
+    Route::post('/doctor/availability-store', [DoctorController::class, 'storeAvailability'])->name('doctor.availability.store');
+    Route::get('/doctor/get-availability/{id}', [DoctorController::class, 'getAvailability'])->name('doctor.availability.get');
+    Route::put('/doctor/availability/update/{id}', [DoctorController::class, 'updateAvailability'])->name('doctor.availability.update');
+    Route::delete('/doctor/availability/delete/{id}', [DoctorController::class, 'deleteAvailability'])->name('doctor.availability.delete');
 
 
 

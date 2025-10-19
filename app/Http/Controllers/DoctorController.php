@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DoctorController extends Controller
 {
@@ -20,7 +22,7 @@ class DoctorController extends Controller
         ->where('id', $id)
         ->first();
 
-        return view('doctor.profile', compact('user'));
+        return view('front.account.doctor.profile', compact('user'));
     }
 
     // public function doctorDetailsShow($id)
@@ -115,9 +117,7 @@ class DoctorController extends Controller
         }
     }
 
-    /**
-     * Store feedback
-     */
+
     public function storeFeedback(Request $request, $id)
     {
         if (!Auth::check()) {
@@ -149,11 +149,8 @@ class DoctorController extends Controller
         }
     }
 
-    // public function addAvailability(Request $request)
-    // {
-    //     return view('front.account.doctor.addAvalability');
-    // }
 
+    // Show add availability page
     public function addAvailability()
     {
         try {
@@ -174,7 +171,7 @@ class DoctorController extends Controller
                 ->where('d.doctor_id', Auth::id())
                 ->first();
 
-            // Get existing availabilities
+            // Get existing availabilities for current and future dates
             $availabilities = DB::table('tbl_availability')
                 ->where('doctor_id', Auth::id())
                 ->where('date', '>=', now()->format('Y-m-d'))
@@ -185,7 +182,7 @@ class DoctorController extends Controller
             return view('front.account.doctor.addAvalability', compact('doctor', 'availabilities'));
 
         } catch (\Exception $e) {
-            \Log::error('Error in addAvailability: ' . $e->getMessage());
+            Log::error('Error in addAvailability: ' . $e->getMessage());
             return redirect()->route('account.profile')->with('error', 'Something went wrong. Please try again.');
         }
     }
@@ -193,30 +190,42 @@ class DoctorController extends Controller
     // Store availability data
     public function storeAvailability(Request $request)
     {
+        DB::beginTransaction();
         try {
             $request->validate([
                 'date' => 'required|date|after_or_equal:today',
-                'start_time_slot' => 'required',
-                'end_time_slot' => 'required|after:start_time_slot',
+                'start_time_slot' => 'required|date_format:H:i',
+                'end_time_slot' => 'required|date_format:H:i|after:start_time_slot',
                 'number_of_tokens' => 'required|integer|min:1|max:10',
                 'notes' => 'nullable|string|max:500',
             ]);
+
+            // Convert times to proper format
+            $startTime = $request->start_time_slot;
+            $endTime = $request->end_time_slot;
+
+            // Check if end time is after start time
+            if (strtotime($endTime) <= strtotime($startTime)) {
+                DB::rollback();
+                return redirect()->back()
+                    ->with('error', 'End time must be after start time.')
+                    ->withInput();
+            }
 
             // Check for overlapping time slots
             $overlappingSlot = DB::table('tbl_availability')
                 ->where('doctor_id', Auth::id())
                 ->where('date', $request->date)
-                ->where(function($query) use ($request) {
-                    $query->whereBetween('start_time_slot', [$request->start_time_slot, $request->end_time_slot])
-                          ->orWhereBetween('end_time_slot', [$request->start_time_slot, $request->end_time_slot])
-                          ->orWhere(function($q) use ($request) {
-                              $q->where('start_time_slot', '<=', $request->start_time_slot)
-                                ->where('end_time_slot', '>=', $request->end_time_slot);
-                          });
+                ->where(function($query) use ($startTime, $endTime) {
+                    $query->where(function($q) use ($startTime, $endTime) {
+                        $q->where('start_time_slot', '<', $endTime)
+                          ->where('end_time_slot', '>', $startTime);
+                    });
                 })
                 ->first();
 
             if ($overlappingSlot) {
+                DB::rollback();
                 return redirect()->back()
                     ->with('error', 'This time slot overlaps with an existing availability. Please choose a different time.')
                     ->withInput();
@@ -226,8 +235,8 @@ class DoctorController extends Controller
             DB::table('tbl_availability')->insert([
                 'doctor_id' => Auth::id(),
                 'date' => $request->date,
-                'start_time_slot' => $request->start_time_slot,
-                'end_time_slot' => $request->end_time_slot,
+                'start_time_slot' => $startTime,
+                'end_time_slot' => $endTime,
                 'number_of_tokens' => $request->number_of_tokens,
                 'notes' => $request->notes,
                 'status' => 'available',
@@ -235,38 +244,21 @@ class DoctorController extends Controller
                 'updated_at' => now(),
             ]);
 
+            DB::commit();
             return redirect()->route('doctor.addAvailability')
                 ->with('success', 'Availability slot added successfully!');
 
         } catch (\Exception $e) {
-            \Log::error('Error storing availability: ' . $e->getMessage());
+            DB::rollback();
+            Log::error('Error storing availability: ' . $e->getMessage());
             return redirect()->back()
                 ->with('error', 'Failed to add availability slot. Please try again.')
                 ->withInput();
         }
     }
 
-    // Manage availability (view all slots)
-    public function manageAvailability()
-    {
-        try {
-            $availabilities = DB::table('tbl_availability')
-                ->where('doctor_id', Auth::id())
-                ->orderBy('date', 'desc')
-                ->orderBy('start_time_slot', 'desc')
-                ->paginate(10);
-
-            return view('front.account.doctor.manageAvailability', compact('availabilities'));
-
-        } catch (\Exception $e) {
-            \Log::error('Error in manageAvailability: ' . $e->getMessage());
-            return redirect()->route('doctor.addAvailability')
-                ->with('error', 'Failed to load availability slots.');
-        }
-    }
-
-    // Delete availability slot
-    public function deleteAvailability($id)
+    // Get availability slot data for editing (AJAX)
+    public function getAvailability($id)
     {
         try {
             $availability = DB::table('tbl_availability')
@@ -275,11 +267,191 @@ class DoctorController extends Controller
                 ->first();
 
             if (!$availability) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Availability slot not found.'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'slot' => $availability
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting availability: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load slot data.'
+            ], 500);
+        }
+    }
+
+    // Show edit availability form
+    public function editAvailability($id)
+    {
+        try {
+            // Get the availability slot
+            $availability = DB::table('tbl_availability')
+                ->where('id', $id)
+                ->where('doctor_id', Auth::id())
+                ->first();
+
+            if (!$availability) {
+                return redirect()->route('doctor.addAvailability')
+                    ->with('error', 'Availability slot not found.');
+            }
+
+            // Check if slot can be edited (only available slots)
+            if ($availability->status !== 'available') {
+                return redirect()->route('doctor.addAvailability')
+                    ->with('error', 'Only available slots can be edited.');
+            }
+
+            // Get user details
+            $user = DB::table('users')
+                ->where('id', Auth::id())
+                ->first();
+
+            // Check if doctor profile exists
+            $doctorExists = DB::table('tbl_doctor')
+                ->where('doctor_id', Auth::id())
+                ->exists();
+
+            if ($doctorExists) {
+                $doctor = DB::table('tbl_doctor as d')
+                    ->join('users as u', 'd.doctor_id', '=', 'u.id')
+                    ->select('d.*', 'u.name as doctor_name', 'u.email', 'u.mobile')
+                    ->where('d.doctor_id', Auth::id())
+                    ->first();
+            } else {
+                // Create a dummy doctor object with user data
+                $doctor = (object)[
+                    'doctor_name' => $user->name,
+                    'email' => $user->email,
+                    'mobile' => $user->mobile,
+                    'qualification' => 'Not specified',
+                    'years_experience' => 0,
+                    'clinic_name' => 'Your Clinic',
+                    'license_number' => 'Pending'
+                ];
+            }
+
+            return view('front.account.doctor.editAvailability', compact('availability', 'doctor'));
+
+        } catch (\Exception $e) {
+            Log::error('Error in editAvailability: ' . $e->getMessage());
+            return redirect()->route('doctor.addAvailability')
+                ->with('error', 'Something went wrong. Please try again.');
+        }
+    }
+
+    // Update availability slot
+    public function updateAvailability(Request $request, $id)
+    {
+        DB::beginTransaction();
+        try {
+            $request->validate([
+                'date' => 'required|date|after_or_equal:today',
+                'start_time_slot' => 'required|date_format:H:i',
+                'end_time_slot' => 'required|date_format:H:i|after:start_time_slot',
+                'number_of_tokens' => 'required|integer|min:1|max:10',
+                'notes' => 'nullable|string|max:500',
+            ]);
+
+            // Check if availability slot exists and belongs to doctor
+            $availability = DB::table('tbl_availability')
+                ->where('id', $id)
+                ->where('doctor_id', Auth::id())
+                ->first();
+
+            if (!$availability) {
+                DB::rollback();
+                return redirect()->route('doctor.addAvailability')
+                    ->with('error', 'Availability slot not found.');
+            }
+
+            // Check if slot can be edited
+            if ($availability->status !== 'available') {
+                DB::rollback();
+                return redirect()->route('doctor.addAvailability')
+                    ->with('error', 'Only available slots can be edited.');
+            }
+
+            // Convert times to proper format
+            $startTime = $request->start_time_slot;
+            $endTime = $request->end_time_slot;
+
+            // Check if end time is after start time
+            if (strtotime($endTime) <= strtotime($startTime)) {
+                DB::rollback();
+                return redirect()->back()
+                    ->with('error', 'End time must be after start time.')
+                    ->withInput();
+            }
+
+            // Check for overlapping time slots (excluding current slot)
+            $overlappingSlot = DB::table('tbl_availability')
+                ->where('doctor_id', Auth::id())
+                ->where('date', $request->date)
+                ->where('id', '!=', $id)
+                ->where(function($query) use ($startTime, $endTime) {
+                    $query->where(function($q) use ($startTime, $endTime) {
+                        $q->where('start_time_slot', '<', $endTime)
+                          ->where('end_time_slot', '>', $startTime);
+                    });
+                })
+                ->first();
+
+            if ($overlappingSlot) {
+                DB::rollback();
+                return redirect()->back()
+                    ->with('error', 'This time slot overlaps with another availability. Please choose a different time.')
+                    ->withInput();
+            }
+
+            // Update the availability slot
+            DB::table('tbl_availability')
+                ->where('id', $id)
+                ->where('doctor_id', Auth::id())
+                ->update([
+                    'date' => $request->date,
+                    'start_time_slot' => $startTime,
+                    'end_time_slot' => $endTime,
+                    'number_of_tokens' => $request->number_of_tokens,
+                    'notes' => $request->notes,
+                    'updated_at' => now(),
+                ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Availability slot updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Error updating availability: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update availability slot. Please try again.')
+                ->withInput();
+        }
+    }
+
+    // Delete availability slot
+    public function deleteAvailability($id)
+    {
+        DB::beginTransaction();
+        try {
+            $availability = DB::table('tbl_availability')
+                ->where('id', $id)
+                ->where('doctor_id', Auth::id())
+                ->first();
+
+            if (!$availability) {
+                DB::rollback();
                 return redirect()->back()->with('error', 'Availability slot not found.');
             }
 
             // Check if slot is already booked
             if ($availability->status === 'booked') {
+                DB::rollback();
                 return redirect()->back()->with('error', 'Cannot delete a booked slot. Please contact patients first.');
             }
 
@@ -288,112 +460,15 @@ class DoctorController extends Controller
                 ->where('doctor_id', Auth::id())
                 ->delete();
 
+            DB::commit();
             return redirect()->back()->with('success', 'Availability slot deleted successfully.');
 
         } catch (\Exception $e) {
-            \Log::error('Error deleting availability: ' . $e->getMessage());
+            DB::rollback();
+            Log::error('Error deleting availability: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to delete availability slot.');
         }
     }
-
-    // Show edit availability form
-public function editAvailability($id)
-{
-    try {
-        // Get the availability slot
-        $availability = DB::table('tbl_availability')
-            ->where('id', $id)
-            ->where('doctor_id', Auth::id())
-            ->first();
-
-        if (!$availability) {
-            return redirect()->route('doctor.addAvailability')
-                ->with('error', 'Availability slot not found.');
-        }
-
-        // Get doctor details
-        $doctor = DB::table('tbl_doctor as d')
-            ->join('users as u', 'd.doctor_id', '=', 'u.id')
-            ->select('d.*', 'u.name as doctor_name', 'u.email', 'u.mobile')
-            ->where('d.doctor_id', Auth::id())
-            ->first();
-
-        return view('front.account.doctor.editAvailability', compact('availability', 'doctor'));
-
-    } catch (\Exception $e) {
-        \Log::error('Error in editAvailability: ' . $e->getMessage());
-        return redirect()->route('doctor.addAvailability')
-            ->with('error', 'Something went wrong. Please try again.');
-    }
-}
-
-// Update availability slot
-public function updateAvailability(Request $request, $id)
-{
-    try {
-        $request->validate([
-            'date' => 'required|date|after_or_equal:today',
-            'start_time_slot' => 'required',
-            'end_time_slot' => 'required|after:start_time_slot',
-            'number_of_tokens' => 'required|integer|min:1|max:10',
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        // Check if availability slot exists and belongs to doctor
-        $availability = DB::table('tbl_availability')
-            ->where('id', $id)
-            ->where('doctor_id', Auth::id())
-            ->first();
-
-        if (!$availability) {
-            return redirect()->route('doctor.addAvailability')
-                ->with('error', 'Availability slot not found.');
-        }
-
-        // Check for overlapping time slots (excluding current slot)
-        $overlappingSlot = DB::table('tbl_availability')
-            ->where('doctor_id', Auth::id())
-            ->where('date', $request->date)
-            ->where('id', '!=', $id)
-            ->where(function($query) use ($request) {
-                $query->whereBetween('start_time_slot', [$request->start_time_slot, $request->end_time_slot])
-                      ->orWhereBetween('end_time_slot', [$request->start_time_slot, $request->end_time_slot])
-                      ->orWhere(function($q) use ($request) {
-                          $q->where('start_time_slot', '<=', $request->start_time_slot)
-                            ->where('end_time_slot', '>=', $request->end_time_slot);
-                      });
-            })
-            ->first();
-
-        if ($overlappingSlot) {
-            return redirect()->back()
-                ->with('error', 'This time slot overlaps with another availability. Please choose a different time.')
-                ->withInput();
-        }
-
-        // Update the availability slot
-        DB::table('tbl_availability')
-            ->where('id', $id)
-            ->where('doctor_id', Auth::id())
-            ->update([
-                'date' => $request->date,
-                'start_time_slot' => $request->start_time_slot,
-                'end_time_slot' => $request->end_time_slot,
-                'number_of_tokens' => $request->number_of_tokens,
-                'notes' => $request->notes,
-                'updated_at' => now(),
-            ]);
-
-        return redirect()->route('doctor.addAvailability')
-            ->with('success', 'Availability slot updated successfully!');
-
-    } catch (\Exception $e) {
-        \Log::error('Error updating availability: ' . $e->getMessage());
-        return redirect()->back()
-            ->with('error', 'Failed to update availability slot. Please try again.')
-            ->withInput();
-    }
-}
 }
 
 

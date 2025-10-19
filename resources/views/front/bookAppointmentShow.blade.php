@@ -3,91 +3,243 @@
 @section('main')
 <section class="section-5 bg-2">
     <div class="container py-5">
-        <!-- Breadcrumb Navigation -->
         <div class="row">
-            <div class="col-lg-3">
-                @include('front.account.slidebar')
-            </div>
             <div class="col">
-                <nav aria-label="breadcrumb" class="rounded-3 p-3 mb-4 bg-light">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="#">Home</a></li>
-                        <li class="breadcrumb-item active">Counselor Sessions</li>
-                    </ol>
-                    <br>
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item">
-                            <a href=""><i class="fa fa-arrow-left" aria-hidden="true"></i> &nbsp;Back to Counselor</a>
-                        </li>
-                    </ol>
-                </nav>
-            </div>
-        </div>
+                <div class="row">
+                    <div class="col-lg-3">
+                        @include('front.account.patient.slidebar')
+                    </div>
+                    <div class="col-lg-9">
+                        <!-- Breadcrumb Navigation -->
+                        <nav aria-label="breadcrumb" class="rounded-3 p-3 mb-4 bg-light">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a href="{{ route('home') }}">Home</a></li>
+                                <li class="breadcrumb-item active">Book Appointment</li>
+                            </ol>
+                            <br>
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item">
+                                    <a href="{{ route('patient.findDoctors') }}">
+                                        <i class="fa fa-arrow-left" aria-hidden="true"></i> &nbsp;Back to Doctors
+                                    </a>
+                                </li>
+                            </ol>
+                        </nav>
 
-        <!-- My Appointments Button -->
-        <div class="row mb-3">
-            <div class="col text-center">
-                <a href="" class="btn btn-lg btn-primary">
-                    <i class="fa fa-calendar-check" aria-hidden="true"></i> View My Appointments
-                </a>
-            </div>
-        </div>
+                        <!-- My Appointments Button -->
+                        {{-- <div class="row mb-4">
+                            <div class="col text-center">
+                                <a href="{{ route('patient.my-appointments') }}" class="btn btn-lg btn-primary">
+                                    <i class="fa fa-calendar-check" aria-hidden="true"></i> View My Appointments
+                                </a>
+                            </div>
+                        </div> --}}
 
-        <!-- Session Booking Table -->
-        {{-- <div class="row">
-            <div class="col-lg-12">
-                @include('front.message')
+                        <!-- Doctor Information -->
+                        @if(isset($doctor))
+                        <div class="row mb-4">
+                            <div class="col-lg-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-2 text-center">
+                                                <div class="avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                                    <i class="fa fa-user-md fa-2x"></i>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-8">
+                                                <h4 class="card-title mb-2">Dr. {{ $doctor->doctor_name }}</h4>
+                                                <p class="card-text mb-1">
+                                                    <strong>Qualification:</strong> {{ $doctor->qualification }}
+                                                </p>
+                                                <p class="card-text mb-1">
+                                                    <strong>Clinic:</strong> {{ $doctor->clinic_name }}
+                                                </p>
+                                                <p class="card-text mb-0">
+                                                    <strong>Experience:</strong> {{ $doctor->years_experience }} years
+                                                </p>
+                                            </div>
+                                            <div class="col-md-2 text-end">
+                                                <span class="badge bg-success fs-6">Available</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
 
-                <h5 class="mb-4">Available Time Slots for {{ $counselor->user->name ?? 'Counselor' }}</h5>
+                        <!-- Session Booking Table -->
+                        <div class="row">
+                            <div class="col-lg-12">
+                                @include('front.message')
 
-                @if($availabilities->isNotEmpty())
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>start_time_slot</th>
-                                <th>end_time_slot</th>
-                                <th>Status</th>
-                                <th>token</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($availabilities as $availability)
-                                <tr>
-                                    <td>{{ \Carbon\Carbon::parse($availability->date)->format('M d, Y') }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($availability->start_time_slot)->format('h:i A') }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($availability->end_time_slot)->format('h:i A') }}</td>
-
-                                    <td>{{ ucfirst($availability->status) }}</td>
-                                    <td>{{ ucfirst($availability->number_of_tokens) }}</td>
-
-                                    <td>
-                                        @if($availability->status == 'available')
-                                            <form action="{{ route('appointments.book') }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="counselor_id" value="{{ $counselor->id }}">
-                                                <input type="hidden" name="user_id" value="{{ auth()->user()->id }}">
-                                                <input type="hidden" name="date" value="{{ $availability->date }}">
-                                                <input type="hidden" name="start_time_slot" value="{{ $availability->start_time_slot }}">
-                                                <input type="hidden" name="end_time_slot" value="{{ $availability->end_time_slot }}">
-                                                <input type="hidden" name="number_of_tokens" value="{{ $availability->number_of_tokens }}">
-
-                                                <button type="submit" class="btn btn-primary btn-sm">Book</button>
-                                            </form>
+                                <div class="card">
+                                    <div class="card-header bg-white">
+                                        <h5 class="card-title mb-0">
+                                            <i class="fa fa-calendar-alt me-2 text-primary"></i>
+                                            Available Time Slots
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        @if(isset($avalabilityList) && $avalabilityList->isNotEmpty())
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered table-hover">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Start Time</th>
+                                                            <th>End Time</th>
+                                                            <th>Duration</th>
+                                                            <th>Available Tokens</th>
+                                                            <th>Status</th>
+                                                            <th class="text-center">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach ($avalabilityList as $availability)
+                                                            <tr>
+                                                                <td class="fw-bold">
+                                                                    {{ \Carbon\Carbon::parse($availability->date)->format('M d, Y') }}
+                                                                    @if(\Carbon\Carbon::parse($availability->date)->isToday())
+                                                                        <span class="badge bg-info ms-1">Today</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td>{{ \Carbon\Carbon::parse($availability->start_time_slot)->format('h:i A') }}</td>
+                                                                <td>{{ \Carbon\Carbon::parse($availability->end_time_slot)->format('h:i A') }}</td>
+                                                                <td>
+                                                                    @php
+                                                                        $start = \Carbon\Carbon::parse($availability->start_time_slot);
+                                                                        $end = \Carbon\Carbon::parse($availability->end_time_slot);
+                                                                        $duration = $start->diffInMinutes($end);
+                                                                    @endphp
+                                                                    {{ $duration }} min
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge bg-secondary">{{ $availability->number_of_tokens }}</span>
+                                                                </td>
+                                                                <td>
+                                                                    @if($availability->status == 'available')
+                                                                        <span class="badge bg-success">Available</span>
+                                                                    @else
+                                                                        <span class="badge bg-warning">Booked</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    @if($availability->status == 'available' && $availability->number_of_tokens > 0)
+                                                                        <button class="btn btn-primary btn-sm book-btn" 
+                                                                                data-bs-toggle="modal" 
+                                                                                data-bs-target="#bookTokenModal"
+                                                                                data-availability-id="{{ $availability->id }}"
+                                                                                data-date="{{ \Carbon\Carbon::parse($availability->date)->format('M d, Y') }}"
+                                                                                data-time="{{ \Carbon\Carbon::parse($availability->start_time_slot)->format('h:i A') }} - {{ \Carbon\Carbon::parse($availability->end_time_slot)->format('h:i A') }}"
+                                                                                data-tokens="{{ $availability->number_of_tokens }}">
+                                                                            <i class="fa fa-calendar-plus me-1"></i> Book
+                                                                        </button>
+                                                                    @else
+                                                                        <span class="badge bg-secondary">Not Available</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         @else
-                                            <span class="badge bg-secondary">Booked</span>
+                                            <div class="text-center py-5">
+                                                <i class="fa fa-calendar-times fa-3x text-muted mb-3"></i>
+                                                <h5 class="text-muted">No Available Time Slots</h5>
+                                                <p class="text-muted">This doctor doesn't have any available slots at the moment.</p>
+                                                <a href="{{ route('patient.findDoctors') }}" class="btn btn-primary">
+                                                    <i class="fa fa-arrow-left me-1"></i> Choose Another Doctor
+                                                </a>
+                                            </div>
                                         @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                @else
-                    <p class="text-muted">No available time slots at the moment. Please check back later.</p>
-                @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div> --}}
+        </div>
     </div>
 </section>
+
+<!-- Book Token Modal -->
+<div class="modal fade" id="bookTokenModal" tabindex="-1" aria-labelledby="bookTokenModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bookTokenModalLabel">
+                    <i class="fa fa-calendar-check me-2 text-primary"></i>Book Appointment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="" method="POST" id="bookTokenForm">
+                @csrf
+                <input type="hidden" name="availability_id" id="availability_id">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading mb-2">Appointment Details</h6>
+                        <p class="mb-1"><strong>Doctor:</strong> Dr. {{ $doctor->doctor_name ?? 'Doctor' }}</p>
+                        <p class="mb-1" id="slotDate"></p>
+                        <p class="mb-0" id="slotTime"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="patient_notes" class="form-label">Notes for Doctor (Optional)</label>
+                        <textarea name="patient_notes" id="patient_notes" class="form-control" rows="3" 
+                                  placeholder="Describe your symptoms, concerns, or any specific requirements..."></textarea>
+                        <div class="form-text">This information will help the doctor prepare for your appointment.</div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <small>
+                            <i class="fa fa-info-circle me-1"></i>
+                            Please arrive 10 minutes before your scheduled time. Late arrivals may result in rescheduling.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-check me-1"></i>Confirm Booking
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('customJS')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const bookTokenModal = document.getElementById('bookTokenModal');
+    
+    bookTokenModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const availabilityId = button.getAttribute('data-availability-id');
+        const date = button.getAttribute('data-date');
+        const time = button.getAttribute('data-time');
+        const tokens = button.getAttribute('data-tokens');
+        
+        // Set the form values
+        document.getElementById('availability_id').value = availabilityId;
+        document.getElementById('slotDate').innerHTML = `<strong>Date:</strong> ${date}`;
+        document.getElementById('slotTime').innerHTML = `<strong>Time:</strong> ${time}`;
+    });
+
+    // Form submission handling
+    document.getElementById('bookTokenForm').addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Booking...';
+        submitBtn.disabled = true;
+        
+        // Form will submit normally, SweetAlert will be closed by page reload
+    });
+});
+</script>
 @endsection
