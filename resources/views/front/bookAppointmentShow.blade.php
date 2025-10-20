@@ -7,67 +7,21 @@
             <div class="col">
                 <div class="row">
                     <div class="col-lg-3">
-                        @include('front.account.patient.slidebar')
+                        @include('front.account.slidebar')
                     </div>
                     <div class="col-lg-9">
-                        <!-- Breadcrumb Navigation -->
+                        <!-- Breadcrumb -->
                         <nav aria-label="breadcrumb" class="rounded-3 p-3 mb-4 bg-light">
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a href="{{ route('home') }}">Home</a></li>
-                                <li class="breadcrumb-item active">Book Appointment</li>
-                            </ol>
-                            <br>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="{{ route('patient.findDoctors') }}">
-                                        <i class="fa fa-arrow-left" aria-hidden="true"></i> &nbsp;Back to Doctors
-                                    </a>
-                                </li>
-                            </ol>
-                        </nav>
-
-                        <!-- My Appointments Button -->
-                        {{-- <div class="row mb-4">
-                            <div class="col text-center">
-                                <a href="{{ route('patient.my-appointments') }}" class="btn btn-lg btn-primary">
-                                    <i class="fa fa-calendar-check" aria-hidden="true"></i> View My Appointments
-                                </a>
-                            </div>
-                        </div> --}}
-
-                        <!-- Doctor Information -->
-                        @if(isset($doctor))
-                        <div class="row mb-4">
-                            <div class="col-lg-12">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div class="row align-items-center">
-                                            <div class="col-md-2 text-center">
-                                                <div class="avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                                                    <i class="fa fa-user-md fa-2x"></i>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-8">
-                                                <h4 class="card-title mb-2">Dr. {{ $doctor->doctor_name }}</h4>
-                                                <p class="card-text mb-1">
-                                                    <strong>Qualification:</strong> {{ $doctor->qualification }}
-                                                </p>
-                                                <p class="card-text mb-1">
-                                                    <strong>Clinic:</strong> {{ $doctor->clinic_name }}
-                                                </p>
-                                                <p class="card-text mb-0">
-                                                    <strong>Experience:</strong> {{ $doctor->years_experience }} years
-                                                </p>
-                                            </div>
-                                            <div class="col-md-2 text-end">
-                                                <span class="badge bg-success fs-6">Available</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <ol class="breadcrumb mb-2">
+                                        <li class="breadcrumb-item"><a href="{{ route('home') }}">Home</a></li>
+                                        <li class="breadcrumb-item active">Book Appointment</li>
+                                    </ol>
                                 </div>
                             </div>
-                        </div>
-                        @endif
+                        </nav>
+
 
                         <!-- Session Booking Table -->
                         <div class="row">
@@ -76,10 +30,17 @@
 
                                 <div class="card">
                                     <div class="card-header bg-white">
-                                        <h5 class="card-title mb-0">
-                                            <i class="fa fa-calendar-alt me-2 text-primary"></i>
-                                            Available Time Slots
-                                        </h5>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h5 class="card-title mb-0">
+                                                <i class="fa fa-calendar-alt me-2 text-primary"></i>
+                                                @foreach ($doctors as $doctor)
+                                                Available Time Slots for Dr. {{ $doctor->doctor_name ?? 'Doctor' }}
+                                                @endforeach
+                                            </h5>
+                                            <a href="" class="btn btn-primary btn-sm">
+                                                <i class="fa fa-calendar-check me-1"></i> My Appointments
+                                            </a>
+                                        </div>
                                     </div>
                                     <div class="card-body">
                                         @if(isset($avalabilityList) && $avalabilityList->isNotEmpty())
@@ -211,35 +172,4 @@
         </div>
     </div>
 </div>
-@endsection
-
-@section('customJS')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const bookTokenModal = document.getElementById('bookTokenModal');
-    
-    bookTokenModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const availabilityId = button.getAttribute('data-availability-id');
-        const date = button.getAttribute('data-date');
-        const time = button.getAttribute('data-time');
-        const tokens = button.getAttribute('data-tokens');
-        
-        // Set the form values
-        document.getElementById('availability_id').value = availabilityId;
-        document.getElementById('slotDate').innerHTML = `<strong>Date:</strong> ${date}`;
-        document.getElementById('slotTime').innerHTML = `<strong>Time:</strong> ${time}`;
-    });
-
-    // Form submission handling
-    document.getElementById('bookTokenForm').addEventListener('submit', function(e) {
-        const submitBtn = this.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Booking...';
-        submitBtn.disabled = true;
-        
-        // Form will submit normally, SweetAlert will be closed by page reload
-    });
-});
-</script>
 @endsection

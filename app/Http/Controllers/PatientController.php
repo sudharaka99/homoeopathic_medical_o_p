@@ -176,38 +176,35 @@ class PatientController extends Controller
 
     
 
-   public function createAppointment(Request $request, $id)
-{
-    try {
-        // Get doctor details
-        $doctor = DB::table('tbl_doctor as d')
-            ->join('users as u', 'd.doctor_id', '=', 'u.id')
-            ->select('d.*', 'u.name as doctor_name', 'u.email', 'u.mobile')
-            ->where('d.doctor_id', $id)
-            ->first();
+    public function createAppointment(Request $request, $id)
+    {
+        try {
 
-        if (!$doctor) {
-            return redirect()->route('patient.findDoctors')
-                ->with('error', 'Doctor not found.');
+            $doctors = DB::table('tbl_doctor as d')
+                ->join('users as u', 'd.doctor_id', '=', 'u.id')
+                ->where('d.doctor_id', $id)
+                ->select(
+                    'u.name as doctor_name',
+                )
+                ->get();
+
+            // Get availability list
+            $avalabilityList = DB::table('tbl_availability as da')
+                ->where('da.doctor_id', $id)
+                ->where('da.date', '>=', date('Y-m-d'))
+                ->where('status', 'available')
+                ->where('number_of_tokens', '>', 0)
+                ->orderBy('da.date', 'asc')
+                ->orderBy('da.start_time_slot', 'asc')
+                ->get();
+
+            return view('front.bookAppointmentShow', compact('avalabilityList','doctors'));
+
+        } catch (\Exception $e) {
+            Log::error('Error in createAppointment: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load appointment booking page.');
         }
-
-        // Get availability list
-        $avalabilityList = DB::table('tbl_availability as da')
-            ->where('da.doctor_id', $id)
-            ->where('da.date', '>=', date('Y-m-d'))
-            ->where('status', 'available')
-            ->where('number_of_tokens', '>', 0)
-            ->orderBy('da.date', 'asc')
-            ->orderBy('da.start_time_slot', 'asc')
-            ->get();
-
-        return view('front.bookAppointmentShow', compact('avalabilityList', 'doctor'));
-
-    } catch (\Exception $e) {
-        Log::error('Error in createAppointment: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Failed to load appointment booking page.');
     }
-}
 
 }
 

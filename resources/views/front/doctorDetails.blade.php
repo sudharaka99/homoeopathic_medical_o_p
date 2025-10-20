@@ -97,7 +97,7 @@
                         <div class="d-flex flex-column flex-sm-row gap-2 justify-content-start justify-content-sm-end pt-3 border-top">
                             @if(Auth::check())
                                 {{-- Book Appointment Button for Logged-in Users --}}
-                                <button type="button" class="btn btn-success" onclick="bookAppointment({{ $doctor->id }})">
+                                <button type="button" class="btn btn-success" onclick="bookAppointment({{ $doctor->doctor_id  }})">
                                     <i class="fa fa-calendar-check me-1"></i> Book Appointment
                                 </button>
 
@@ -519,6 +519,7 @@ a:focus, button:focus, input:focus, textarea:focus {
 @section('customJS')
 <script type="text/javascript">
 // Define bookAppointment function globally (outside document.ready)
+// Define bookAppointment function globally (outside document.ready)
 function bookAppointment(doctorId) {
     console.log('Booking appointment for doctor ID:', doctorId);
     
@@ -543,7 +544,7 @@ function bookAppointment(doctorId) {
                 timer: 1500
             });
             
-            // Redirect to booking page
+            // Redirect to booking page - FIXED ROUTE
             setTimeout(() => {
                 window.location.href = '{{ route("patient.bookAppointment", ":id") }}'.replace(':id', doctorId);
             }, 1000);
