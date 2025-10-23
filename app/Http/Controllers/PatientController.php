@@ -13,6 +13,27 @@ use App\Models\User;
 
 class PatientController extends Controller
 {
+    // public function dashboard()
+    // {
+    //     return view('front.account.dashboard');
+    // }
+
+     public function dashboard()
+    {
+        $user = Auth::user();
+
+        // Load user’s appointments
+        // $appointments = Appointment::with('doctor')
+        //     ->where('patient_id', $user->id)
+        //     ->orderBy('appointment_date', 'desc')
+        //     ->get();
+
+        // Recently consulted doctors (based on appointments)
+        // $recentDoctors = Doctor::whereIn('id', $appointments->pluck('doctor_id')->unique())->get();
+
+        return view('front.account.dashboard');
+    }
+
     public function saveDoctor(Request $request)
     {
         try {
@@ -204,6 +225,26 @@ class PatientController extends Controller
             Log::error('Error in createAppointment: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load appointment booking page.');
         }
+    }
+
+    public function hydration()
+    {
+        return view('front.account.health-tips.hydration');
+    }
+
+    public function exercise()
+    {
+        return view('front.account.health-tips.exercise');
+    }
+
+    public function sleep()
+    {
+        return view('front.account.health-tips.sleep');
+    }
+
+    public function diet()
+    {
+        return view('front.account.health-tips.diet');
     }
 
 }

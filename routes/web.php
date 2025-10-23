@@ -32,14 +32,12 @@ Route::group(['middleware' => 'guest'], function () {
 });
 
 Route::group(['middleware' => 'auth'], function () {
-    Route::get('/profile', [AccountController::class, 'profile'])->name('account.profile');
-    Route::put('/update-profile', [AccountController::class, 'updateProfile'])->name('account.updateProfile');
-    Route::get('/logout', [AccountController::class, 'logout'])->name('account.logout');
-    Route::post('/update-profile-pic', [AccountController::class, 'updateProfilePic'])->name('account.updateProfilePic'); // For updating profile picture
-    Route::get('/logout', [AccountController::class, 'logout'])->name('account.logout');
 
-
-});
+Route::get('/profile', [AccountController::class, 'profile'])->name('account.profile');
+Route::put('/update-profile', [AccountController::class, 'updateProfile'])->name('account.updateProfile');
+Route::get('/logout', [AccountController::class, 'logout'])->name('account.logout');
+Route::post('/update-profile-pic', [AccountController::class, 'updateProfilePic'])->name('account.updateProfilePic'); // For updating profile picture
+Route::get('/logout', [AccountController::class, 'logout'])->name('account.logout');
 
 Route::get('/forgot-password', [AccountController::class, 'forgotPassword'])->name('account.forgotPassword');
 Route::post('/process-forgot-password', [AccountController::class, 'processForgotPassword'])->name('account.processForgotPassword');
@@ -59,11 +57,11 @@ Route::get('/doctor/profile', [DoctorController::class, 'profile'])->name('docto
 // Route::get('/doctor/add-availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
 
 
-    Route::get('/doctor/availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
-    Route::post('/doctor/availability-store', [DoctorController::class, 'storeAvailability'])->name('doctor.availability.store');
-    Route::get('/doctor/get-availability/{id}', [DoctorController::class, 'getAvailability'])->name('doctor.availability.get');
-    Route::put('/doctor/availability/update/{id}', [DoctorController::class, 'updateAvailability'])->name('doctor.availability.update');
-    Route::delete('/doctor/availability/delete/{id}', [DoctorController::class, 'deleteAvailability'])->name('doctor.availability.delete');
+Route::get('/doctor/availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
+Route::post('/doctor/availability-store', [DoctorController::class, 'storeAvailability'])->name('doctor.availability.store');
+Route::get('/doctor/get-availability/{id}', [DoctorController::class, 'getAvailability'])->name('doctor.availability.get');
+Route::put('/doctor/availability/update/{id}', [DoctorController::class, 'updateAvailability'])->name('doctor.availability.update');
+Route::delete('/doctor/availability/delete/{id}', [DoctorController::class, 'deleteAvailability'])->name('doctor.availability.delete');
 
 
 
@@ -72,23 +70,37 @@ Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])
 Route::get('/doctor/{id}', [DoctorController::class, 'doctorDetailsShow'])->name('doctor.details');
 
 
-
 // patient
 Route::post('/patient/save-doctor', [PatientController::class, 'saveDoctor'])->name('patient.saveDoctor');
 Route::get('/account/saved-doctors/{id}', [PatientController::class, 'savedDoctors'])->name('account.savedDoctors');
 Route::get('/patient/find-doctors', [PatientController::class, 'findDoctors'])->name('patient.findDoctors');
 Route::get('/create-appointment/{id}', [PatientController::class, 'createAppointment'])->name('patient.bookAppointment');
+Route::get('/patient/dashboard', [PatientController::class, 'dashboard'])->name('patient.dashboard');
+
+
+Route::get('/health-tips/hydration', [PatientController::class, 'hydration'])->name('health-tips.hydration');
+Route::get('/health-tips/exercise', [PatientController::class, 'exercise'])->name('health-tips.exercise');
+Route::get('/health-tips/sleep', [PatientController::class, 'sleep'])->name('health-tips.sleep');
+Route::get('/health-tips/diet', [PatientController::class, 'diet'])->name('health-tips.diet');
+
+});
+
+
+
+
+
+
 
 // Route::get('/', function () {
 //     return view('welcome');
 // });
 
-Route::middleware([
-    'auth:sanctum',
-    config('jetstream.auth_session'),
-    'verified'
-])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-});
+// Route::middleware([
+//     'auth:sanctum',
+//     config('jetstream.auth_session'),
+//     'verified'
+// ])->group(function () {
+//     Route::get('/dashboard', function () {
+//         return view('dashboard');
+//     })->name('dashboard');
+// });

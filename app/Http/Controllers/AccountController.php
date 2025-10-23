@@ -286,7 +286,7 @@ class AccountController extends Controller
                 case 'doctor':
                     return redirect()->route('doctor.dashboard');
                 default:
-                    return redirect()->route('account.profile');
+                    return redirect()->route('patient.dashboard');
             }
 
         } catch (\Exception $e) {
