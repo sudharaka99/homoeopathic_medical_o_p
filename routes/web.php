@@ -83,6 +83,12 @@ Route::get('/health-tips/exercise', [PatientController::class, 'exercise'])->nam
 Route::get('/health-tips/sleep', [PatientController::class, 'sleep'])->name('health-tips.sleep');
 Route::get('/health-tips/diet', [PatientController::class, 'diet'])->name('health-tips.diet');
 
+
+Route::get('/patient/my-details', [PatientController::class, 'myDetails'])->name('patient.myDetails');
+Route::post('/medical-information', [PatientController::class, 'store'])->name('account.medicalInfo.store');   
+Route::get('/medical-documents/{documentType}/{filename}', [PatientController::class, 'viewDocument'])->name('account.medicalInfo.viewDocument');   
+Route::get('/medical-documents/{documentType}/{filename}/download', [PatientController::class, 'downloadDocument'])->name('account.medicalInfo.downloadDocument');   
+Route::delete('/medical-documents/delete', [PatientController::class, 'deleteDocument'])->name('account.medicalInfo.deleteDocument');
 });
 
 

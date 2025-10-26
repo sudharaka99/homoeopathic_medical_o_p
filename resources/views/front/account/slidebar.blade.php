@@ -26,6 +26,10 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center p-3">
                             <a href="{{ route('account.savedDoctors', ['id' => Auth::id()]) }}">Saved Doctors</a>
                         </li>    
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <a href="{{ route('patient.myDetails', ['id' => Auth::id()]) }}">My details</a>
+                        </li>   
                         <li class="list-group-item d-flex justify-content-between align-items-center p-3">
                             <a href="{{ route('account.logout') }}"> Logout</a>
                         </li>                                                     
