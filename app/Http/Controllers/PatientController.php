@@ -249,13 +249,8 @@ class PatientController extends Controller
     }
 
 
-
     public function myDetails(Request $request)
     {
-        if ($request->isMethod('get')) {
-            $request->session()->forget(['success', 'error']);
-        }
-
         $medicalInfo = DB::table('tbl_medical_info')
             ->where('user_id', Auth::id())
             ->first();
@@ -282,90 +277,134 @@ class PatientController extends Controller
         // Fetch files from respective tables with tbl_ prefix
         $bloodTestReports = DB::table('tbl_blood_test_reports')
             ->where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
             ->get();
+            
         $prescriptions = DB::table('tbl_prescriptions')
             ->where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
             ->get();
+            
         $medicalReports = DB::table('tbl_medical_reports')
             ->where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
             ->get();
+            
         $insuranceDocuments = DB::table('tbl_insurance_documents')
             ->where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('front.account.my-details', compact('medicalInfo', 'bloodTestReports', 'prescriptions', 'medicalReports', 'insuranceDocuments'));
+        return view('front.account.my-details', compact(
+            'medicalInfo', 
+            'bloodTestReports', 
+            'prescriptions', 
+            'medicalReports', 
+            'insuranceDocuments'
+        ));
     }
 
     public function store(Request $request)
     {
-        $rules = [
-            'medical_history' => 'nullable|string|max:5000',
-            'current_medications' => 'nullable|string|max:5000',
-            'allergies' => 'nullable|string|max:5000',
-            'hemoglobin' => 'nullable|numeric|min:0|max:50',
-            'rbc_count' => 'nullable|numeric|min:0|max:50',
-            'wbc_count' => 'nullable|numeric|min:0|max:100000',
-            'platelet_count' => 'nullable|numeric|min:0|max:1000000',
-            'blood_sugar' => 'nullable|numeric|min:0|max:1000',
-            'cholesterol' => 'nullable|numeric|min:0|max:1000',
-            'blood_test_reports.*' => 'nullable|file|mimes:pdf|max:5120',
-            'prescriptions.*' => 'nullable|file|mimes:pdf|max:5120',
-            'medical_reports.*' => 'nullable|file|mimes:pdf|max:5120',
-            'insurance_documents.*' => 'nullable|file|mimes:pdf|max:5120',
-            'emergency_contact_name' => 'nullable|string|max:255',
-            'emergency_contact_relation' => 'nullable|string|in:Spouse,Parent,Sibling,Child,Friend,Other',
-            'emergency_contact_phone' => 'nullable|string|max:20',
-        ];
+        try {
+            $rules = [
+                'medical_history' => 'nullable|string|max:5000',
+                'current_medications' => 'nullable|string|max:5000',
+                'allergies' => 'nullable|string|max:5000',
+                'hemoglobin' => 'nullable|numeric|min:0|max:50',
+                'rbc_count' => 'nullable|numeric|min:0|max:50',
+                'wbc_count' => 'nullable|numeric|min:0|max:100000',
+                'platelet_count' => 'nullable|numeric|min:0|max:1000000',
+                'blood_sugar' => 'nullable|numeric|min:0|max:1000',
+                'cholesterol' => 'nullable|numeric|min:0|max:1000',
+                'blood_test_reports.*' => 'nullable|file|mimes:pdf|max:5120',
+                'prescriptions.*' => 'nullable|file|mimes:pdf|max:5120',
+                'medical_reports.*' => 'nullable|file|mimes:pdf|max:5120',
+                'insurance_documents.*' => 'nullable|file|mimes:pdf|max:5120',
+                'emergency_contact_name' => 'nullable|string|max:255',
+                'emergency_contact_relation' => 'nullable|string|in:Spouse,Parent,Sibling,Child,Friend,Other',
+                'emergency_contact_phone' => 'nullable|string|max:20',
+            ];
 
-        $request->validate($rules);
+            $validator = \Validator::make($request->all(), $rules);
 
-        $userId = Auth::id();
-        $data = $request->only([
-            'medical_history',
-            'current_medications',
-            'allergies',
-            'hemoglobin',
-            'rbc_count',
-            'wbc_count',
-            'platelet_count',
-            'blood_sugar',
-            'cholesterol',
-            'emergency_contact_name',
-            'emergency_contact_relation',
-            'emergency_contact_phone',
-        ]);
+            if ($validator->fails()) {
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->withInput()
+                    ->with('error', 'Please check the form for errors.');
+            }
 
-        // Update or create medical info record
-        DB::table('tbl_medical_info')->updateOrInsert(
-            ['user_id' => $userId],
-            array_merge($data, ['updated_at' => now()])
-        );
+            $userId = Auth::id();
+            $data = $request->only([
+                'medical_history',
+                'current_medications',
+                'allergies',
+                'hemoglobin',
+                'rbc_count',
+                'wbc_count',
+                'platelet_count',
+                'blood_sugar',
+                'cholesterol',
+                'emergency_contact_name',
+                'emergency_contact_relation',
+                'emergency_contact_phone',
+            ]);
 
-        // Handle file uploads with tbl_ prefix
-        $fileFields = [
-            'blood_test_reports' => 'tbl_blood_test_reports',
-            'prescriptions' => 'tbl_prescriptions',
-            'medical_reports' => 'tbl_medical_reports',
-            'insurance_documents' => 'tbl_insurance_documents',
-        ];
+            // Update or create medical info record
+            DB::table('tbl_medical_info')->updateOrInsert(
+                ['user_id' => $userId],
+                array_merge($data, [
+                    'updated_at' => now(),
+                    'created_at' => DB::raw('COALESCE(created_at, NOW())')
+                ])
+            );
 
-        foreach ($fileFields as $inputName => $tableName) {
-            if ($request->hasFile($inputName)) {
-                $files = $request->file($inputName);
-                foreach ($files as $file) {
-                    $filename = time() . '_' . str_replace(' ', '_', $file->getClientOriginalName());
-                    $path = $file->storeAs("medical-documents/{$tableName}/{$userId}", $filename, 'public');
-                    DB::table($tableName)->insert([
-                        'user_id' => $userId,
-                        'file_path' => $filename,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+            // Handle file uploads with tbl_ prefix
+            $fileFields = [
+                'blood_test_reports' => 'tbl_blood_test_reports',
+                'prescriptions' => 'tbl_prescriptions',
+                'medical_reports' => 'tbl_medical_reports',
+                'insurance_documents' => 'tbl_insurance_documents',
+            ];
+
+            $uploadedFilesCount = 0;
+            foreach ($fileFields as $inputName => $tableName) {
+                if ($request->hasFile($inputName)) {
+                    $files = $request->file($inputName);
+                    foreach ($files as $file) {
+                        if ($file->isValid()) {
+                            $filename = time() . '_' . uniqid() . '_' . str_replace(' ', '_', $file->getClientOriginalName());
+                            $path = $file->storeAs("medical-documents/{$tableName}/{$userId}", $filename, 'public');
+                            
+                            DB::table($tableName)->insert([
+                                'user_id' => $userId,
+                                'file_path' => $filename,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                            $uploadedFilesCount++;
+                        }
+                    }
                 }
             }
-        }
 
-        return redirect()->back()->with('success', 'Medical information saved successfully!');
+            $message = 'Medical information saved successfully!';
+            if ($uploadedFilesCount > 0) {
+                $message .= " {$uploadedFilesCount} document(s) uploaded.";
+            }
+
+            return redirect()->route('patient.myDetails')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('Medical info save error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to save medical information. Please try again.');
+        }
     }
 
     public function viewDocument($documentType, $id)
@@ -373,29 +412,40 @@ class PatientController extends Controller
         try {
             $user = Auth::user();
             $table = $this->getTableName($documentType);
+            
             if (!$table) {
                 abort(404, 'Invalid document type');
             }
 
-            $record = DB::table($table)->where('id', $id)->where('user_id', $user->id)->first();
+            $record = DB::table($table)
+                ->where('id', $id)
+                ->where('user_id', $user->id)
+                ->first();
+                
             if (!$record) {
-                abort(404, 'Document not found');
+                abort(404, 'Document not found or access denied');
             }
 
             $filePath = "medical-documents/{$table}/{$user->id}/{$record->file_path}";
+            
             if (!Storage::disk('public')->exists($filePath)) {
-                abort(404, 'Document not found');
+                Log::warning("Document file not found: {$filePath}");
+                abort(404, 'Document file not found on server');
             }
 
             $fullPath = Storage::disk('public')->path($filePath);
+            
             return response()->file($fullPath, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="' . $record->file_path . '"',
+                'Content-Disposition' => 'inline; filename="' . basename($record->file_path) . '"',
                 'Cache-Control' => 'public, max-age=3600',
+                'X-Content-Type-Options' => 'nosniff',
             ]);
+            
         } catch (\Exception $e) {
-            \Log::error('Document view error: ' . $e->getMessage());
-            abort(404, 'Document not found');
+            Log::error('Document view error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            abort(404, 'Unable to view document');
         }
     }
 
@@ -406,30 +456,68 @@ class PatientController extends Controller
             $documentType = $request->input('document_type');
             $id = $request->input('id');
 
+            // Validate inputs
+            if (!$documentType || !$id) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Missing document type or ID'
+                ], 400);
+            }
+
             $table = $this->getTableName($documentType);
+            
             if (!$table) {
-                return response()->json(['success' => false, 'message' => 'Invalid document type'], 400);
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Invalid document type'
+                ], 400);
             }
 
-            $record = DB::table($table)->where('id', $id)->where('user_id', $user->id)->first();
+            // Find the document
+            $record = DB::table($table)
+                ->where('id', $id)
+                ->where('user_id', $user->id)
+                ->first();
+                
             if (!$record) {
-                return response()->json(['success' => false, 'message' => 'Document not found'], 404);
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Document not found or access denied'
+                ], 404);
             }
 
+            // Delete the physical file
             $filePath = "medical-documents/{$table}/{$user->id}/{$record->file_path}";
             if (Storage::disk('public')->exists($filePath)) {
                 Storage::disk('public')->delete($filePath);
+                Log::info("Deleted file: {$filePath}");
+            } else {
+                Log::warning("File not found for deletion: {$filePath}");
             }
 
-            DB::table($table)->where('id', $id)->delete();
+            // Delete the database record
+            $deleted = DB::table($table)->where('id', $id)->delete();
 
-            // Clear session flash messages
-            $request->session()->forget(['success', 'error']);
+            if ($deleted) {
+                return response()->json([
+                    'success' => true, 
+                    'message' => 'Document deleted successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Failed to delete document record'
+                ], 500);
+            }
 
-            return response()->json(['success' => true, 'message' => 'Document deleted']);
         } catch (\Exception $e) {
-            \Log::error('Document delete error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error deleting document: ' . $e->getMessage()], 500);
+            Log::error('Document delete error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false, 
+                'message' => 'An error occurred while deleting the document'
+            ], 500);
         }
     }
 
@@ -438,24 +526,33 @@ class PatientController extends Controller
         try {
             $user = Auth::user();
             $table = $this->getTableName($documentType);
+            
             if (!$table) {
                 abort(404, 'Invalid document type');
             }
 
-            $record = DB::table($table)->where('id', $id)->where('user_id', $user->id)->first();
+            $record = DB::table($table)
+                ->where('id', $id)
+                ->where('user_id', $user->id)
+                ->first();
+                
             if (!$record) {
-                abort(404, 'Document not found');
+                abort(404, 'Document not found or access denied');
             }
 
             $filePath = "medical-documents/{$table}/{$user->id}/{$record->file_path}";
+            
             if (!Storage::disk('public')->exists($filePath)) {
-                abort(404, 'Document not found');
+                Log::warning("Download file not found: {$filePath}");
+                abort(404, 'Document file not found on server');
             }
 
-            return Storage::disk('public')->download($filePath, $record->file_path);
+            return Storage::disk('public')->download($filePath, basename($record->file_path));
+            
         } catch (\Exception $e) {
-            \Log::error('Document download error: ' . $e->getMessage());
-            abort(404, 'Document not found');
+            Log::error('Document download error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            abort(404, 'Unable to download document');
         }
     }
 
@@ -467,10 +564,11 @@ class PatientController extends Controller
             'medical-report' => 'tbl_medical_reports',
             'insurance-document' => 'tbl_insurance_documents',
         ];
+        
         return $map[$documentType] ?? null;
     }
-
 }
+
 
 
 

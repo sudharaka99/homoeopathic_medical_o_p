@@ -13,6 +13,7 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Trumbowyg/2.27.3/ui/trumbowyg.min.css" integrity="sha512-Fm8kRNVGCBZn0sPmwJbVXlqfJmPC13zRsMElZenX6v721g/H7OukJd8XzDEBRQ2FSATK8xNF9UYvzsCtUpfeJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 	<link rel="stylesheet" type="text/css" href="{{asset('assets/css/style.css')}}" />
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
@@ -136,7 +137,7 @@
 
 <footer class="bg-dark py-3 bg-2">
 <div class="container">
-    <p class="text-center text-white pt-3 fw-bold fs-6">Copyright© 2025 JRS Sudharaka, All right reserved</p>
+    <p class="text-center text-white pt-3 fw-bold fs-6">Copyright© 2025 M.H.Dilhara Mendis , All right reserved</p>
 </div>
 </footer> 
 <script src="{{asset('assets/js/jquery-3.6.0.min.js')}}"></script>
