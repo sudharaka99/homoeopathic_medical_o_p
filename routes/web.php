@@ -54,6 +54,7 @@ Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.d
 //doctor
 Route::get('/doctor/dashboard', [DoctorController::class, 'index'])->name('doctor.dashboard');
 Route::get('/doctor/profile', [DoctorController::class, 'profile'])->name('doctor.profile');
+Route::put('/doctor/update-profile', [DoctorController::class, 'updateDoctorProfile'])->name('doctor.updateProfile');
 // Route::get('/doctor/add-availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
 
 

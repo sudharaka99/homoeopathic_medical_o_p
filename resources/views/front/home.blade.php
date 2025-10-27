@@ -52,14 +52,14 @@
             </select>
           </div>
 
-          {{-- Clinic / Location --}}
+          {{-- Clinic / District --}}
           <div class="col-md-3">
             <input 
               type="text" 
               class="form-control" 
-              name="location" 
-              placeholder="Clinic or Location" 
-              value="{{ request('location') }}">
+              name="district" 
+              placeholder="Clinic or District" 
+              value="{{ request('district') }}">
           </div>
 
           {{-- Search Button --}}

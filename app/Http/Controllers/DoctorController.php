@@ -14,16 +14,94 @@ class DoctorController extends Controller
         return view('front.account.doctor.dashboard');
     }
 
-    public function profile()
-    {
-        $id = Auth::id();
+  public function profile()
+{
+    $id = Auth::id();
 
-        $user = DB::table('users')
-        ->where('id', $id)
-        ->first();
+    $user = DB::table('users')
+        ->leftJoin('tbl_doctor as d', 'users.id', '=', 'd.doctor_id')
+        ->select('users.*', 'd.specialization', 'd.years_experience', 'd.clinic_name', 'd.license_number', 'd.district', 'd.qualification', 'd.license_image', 'd.appointment_fee', 'd.is_admin_confirmed')
+        ->where('users.id', $id)
+        ->first(); // Use first() instead of get() since we're getting a single user
 
-        return view('front.account.doctor.profile', compact('user'));
+    // Get specializations for dropdown
+    $specializations = DB::table('tbl_specializations')->get(); // Adjust table name if different
+
+    return view('front.account.doctor.profile', compact('user', 'specializations'));
+}
+
+
+public function updateDoctorProfile(Request $request)
+{
+    $user = Auth::user();
+    
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|unique:users,email,' .$user->id. ',id',
+        'mobile' => 'required|string|max:15',
+        'designation' => 'nullable|string|max:255',
+        'license_number' => 'required|string|max:50',
+        'qualification' => 'required|string',
+        'specialization' => 'required|integer',
+        'district' => 'required|string|max:255',
+        'years_experience' => 'nullable|integer',
+        'clinic_name' => 'nullable|string|max:255',
+        'appointment_fee' => 'nullable|numeric',
+        'license_image' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048'
+    ]);
+
+    if ($validator->passes()) {
+        // Update user table
+        DB::table('users')->where('id', $user->id)->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'mobile' => $request->mobile,
+            'designation' => $request->designation,
+            'updated_at' => now()
+        ]);
+
+        // Check if doctor record exists
+        $doctorExists = DB::table('tbl_doctor')->where('doctor_id', $user->id)->exists();
+        
+        // Prepare doctor data - only fields that exist in tbl_doctor
+        $doctorData = [
+            'license_number' => $request->license_number,
+            'qualification' => $request->qualification,
+            'specialization' => $request->specialization,
+            'district' => $request->district,
+            'years_experience' => $request->years_experience,
+            'clinic_name' => $request->clinic_name,
+            'appointment_fee' => $request->appointment_fee,
+            'is_admin_confirmed' => 0, // Reset to pending when updated
+        ];
+
+        // Handle license image upload
+        if ($request->hasFile('license_image')) {
+            $imagePath = $request->file('license_image')->store('doctor_licenses', 'public');
+            $doctorData['license_image'] = $imagePath;
+        }
+
+        if ($doctorExists) {
+            // Update existing doctor record
+            DB::table('tbl_doctor')->where('doctor_id', $user->id)->update($doctorData);
+        } else {
+            // Create new doctor record
+            $doctorData['doctor_id'] = $user->id;
+            $doctorData['doctor_name'] = $request->name; // Use doctor_name column
+            DB::table('tbl_doctor')->insert($doctorData);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Profile updated successfully'
+        ]);
+    } else {
+        return response()->json([
+            'status' => false,
+            'errors' => $validator->errors()
+        ]);
     }
+}
 
     // public function doctorDetailsShow($id)
     // {

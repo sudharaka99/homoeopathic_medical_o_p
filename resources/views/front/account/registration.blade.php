@@ -77,8 +77,8 @@
 
                             <!-- Practice District Field - Sri Lanka Districts -->
                             <div class="mb-3">
-                                <label for="practice_district" class="mb-2">District of medicine*</label>
-                                <select name="practice_district" id="practice_district" class="form-control">
+                                <label for="district" class="mb-2">District of medicine*</label>
+                                <select name="district" id="district" class="form-control">
                                     <option value="">-- Select District --</option>
                                     <!-- Western Province -->
                                     <optgroup label="Western Province">

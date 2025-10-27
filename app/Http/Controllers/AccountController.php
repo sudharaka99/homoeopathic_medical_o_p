@@ -90,6 +90,7 @@ class AccountController extends Controller
                     'specialization'   => 'required|string|max:100',
                     'years_experience' => 'nullable|integer|min:0',
                     'clinic_name'      => 'nullable|string|max:255',
+                    'district'         => 'nullable|string|max:100',
                 ]);
             }
 
@@ -135,6 +136,7 @@ class AccountController extends Controller
                     'specialization'   => $request->specialization,
                     'years_experience' => $request->years_experience,
                     'clinic_name'      => $request->clinic_name,
+                    'district'         => $request->district,
                     // 'created_at'       => now(),
                     // 'updated_at'       => now(),
                 ]);
