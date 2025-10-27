@@ -49,7 +49,7 @@
                             <!-- License Image Upload -->
                             <div class="mb-3">
                                 <label for="license_image" class="mb-2">Upload License Certificate*</label>
-                                <input type="file" name="license_image" id="license_image" class="form-control" accept="image/*">
+                                <input type="file" name="license_image" id="license_image" class="form-control" accept="image/*,.pdf">
                                 <small class="form-text text-muted">Upload a clear image of your medical license/certificate (JPG, PNG, PDF - Max 2MB)</small>
                                 <div id="license_image_preview" class="mt-2" style="display: none;">
                                     <img id="preview_img" src="#" alt="License Preview" class="img-thumbnail" style="max-height: 150px;">
@@ -60,24 +60,88 @@
                             
                             <div class="mb-3">
                                 <label for="qualification" class="mb-2">Qualification*</label>
-                                <input type="text" name="qualification" id="qualification" class="form-control" placeholder="e.g., B.H.M.S., D.H.M.S., M.D.">
+                                <input type="text" name="qualification" id="qualification" class="form-control" placeholder="e.g., MBBS, MD, MS, DNB">
                                 <p></p>
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="specialization" class="mb-2">Specialization*</label>
                                 <select name="specialization" id="specialization" class="form-control">
-                                 <option value="">-- Select Specialization --</option>
+                                    <option value="">-- Select Specialization --</option>
                                     @foreach ($specializations as $specialization)
                                         <option value="{{ $specialization->id }}">{{ $specialization->name }}</option>
                                     @endforeach
                                 </select>
                                 <p></p>
                             </div>
+
+                            <!-- Practice District Field - Sri Lanka Districts -->
+                            <div class="mb-3">
+                                <label for="practice_district" class="mb-2">District of medicine*</label>
+                                <select name="practice_district" id="practice_district" class="form-control">
+                                    <option value="">-- Select District --</option>
+                                    <!-- Western Province -->
+                                    <optgroup label="Western Province">
+                                        <option value="Colombo">Colombo</option>
+                                        <option value="Gampaha">Gampaha</option>
+                                        <option value="Kalutara">Kalutara</option>
+                                    </optgroup>
+                                    <!-- Central Province -->
+                                    <optgroup label="Central Province">
+                                        <option value="Kandy">Kandy</option>
+                                        <option value="Matale">Matale</option>
+                                        <option value="Nuwara Eliya">Nuwara Eliya</option>
+                                    </optgroup>
+                                    <!-- Southern Province -->
+                                    <optgroup label="Southern Province">
+                                        <option value="Galle">Galle</option>
+                                        <option value="Matara">Matara</option>
+                                        <option value="Hambantota">Hambantota</option>
+                                    </optgroup>
+                                    <!-- Northern Province -->
+                                    <optgroup label="Northern Province">
+                                        <option value="Jaffna">Jaffna</option>
+                                        <option value="Kilinochchi">Kilinochchi</option>
+                                        <option value="Mannar">Mannar</option>
+                                        <option value="Mullaitivu">Mullaitivu</option>
+                                        <option value="Vavuniya">Vavuniya</option>
+                                    </optgroup>
+                                    <!-- Eastern Province -->
+                                    <optgroup label="Eastern Province">
+                                        <option value="Ampara">Ampara</option>
+                                        <option value="Batticaloa">Batticaloa</option>
+                                        <option value="Trincomalee">Trincomalee</option>
+                                    </optgroup>
+                                    <!-- North Western Province -->
+                                    <optgroup label="North Western Province">
+                                        <option value="Kurunegala">Kurunegala</option>
+                                        <option value="Puttalam">Puttalam</option>
+                                    </optgroup>
+                                    <!-- North Central Province -->
+                                    <optgroup label="North Central Province">
+                                        <option value="Anuradhapura">Anuradhapura</option>
+                                        <option value="Polonnaruwa">Polonnaruwa</option>
+                                    </optgroup>
+                                    <!-- Uva Province -->
+                                    <optgroup label="Uva Province">
+                                        <option value="Badulla">Badulla</option>
+                                        <option value="Monaragala">Monaragala</option>
+                                    </optgroup>
+                                    <!-- Sabaragamuwa Province -->
+                                    <optgroup label="Sabaragamuwa Province">
+                                        <option value="Kegalle">Kegalle</option>
+                                        <option value="Ratnapura">Ratnapura</option>
+                                    </optgroup>
+                                </select>
+                                <p></p>
+                            </div>
+                            
                             <div class="mb-3">
                                 <label for="years_experience" class="mb-2">Years of Experience</label>
                                 <input type="number" name="years_experience" id="years_experience" class="form-control" placeholder="Enter years of experience">
                                 <p></p>
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="clinic_name" class="mb-2">Clinic / Hospital Name</label>
                                 <input type="text" name="clinic_name" id="clinic_name" class="form-control" placeholder="Enter clinic or hospital name">
@@ -105,11 +169,11 @@ $(document).ready(function() {
         if(this.checked) {
             $('#doctor_fields').show();
             // Make doctor fields required
-            $('#license_number, #qualification, #specialization, #license_image').prop('required', true);
+            $('#license_number, #qualification, #specialization, #practice_district, #license_image').prop('required', true);
         } else {
             $('#doctor_fields').hide();
             // Remove required attribute and clear file input
-            $('#license_number, #qualification, #specialization, #license_image').prop('required', false);
+            $('#license_number, #qualification, #specialization, #practice_district, #license_image').prop('required', false);
             $('#license_image').val('');
             $('#license_image_preview').hide();
         }
@@ -277,9 +341,22 @@ $(document).ready(function() {
                             .html('');
                     }
 
+                    // Handle Practice District Error
+                    if(errors.practice_district){
+                        $("#practice_district").addClass('is-invalid')
+                            .siblings('p')
+                            .addClass('invalid-feedback')
+                            .html(errors.practice_district);
+                    } else {
+                        $("#practice_district").removeClass('is-invalid')
+                            .siblings('p')
+                            .removeClass('invalid-feedback')
+                            .html('');
+                    }
+
                 } else {
                     // Clear all errors
-                    $("#name, #email, #password, #confirm_password, #license_number, #qualification, #specialization, #license_image").removeClass('is-invalid')
+                    $("#name, #email, #password, #confirm_password, #license_number, #qualification, #specialization, #practice_district, #license_image").removeClass('is-invalid')
                         .siblings('p')
                         .removeClass('invalid-feedback')
                         .html('');
