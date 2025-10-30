@@ -7,6 +7,13 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+use App\Mail\ResetPasswordEmail;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;  // or use Imagick if you prefer
+use Illuminate\Support\Facades\File;
+
 
 
 class AccountController extends Controller

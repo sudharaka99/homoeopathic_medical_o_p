@@ -145,11 +145,12 @@ class PatientController extends Controller
                     'd.clinic_name',
                     'd.license_number',
                     's.name as specialization_name',
+                    'd.district', // Add district to select
                     'u.email',
                     'u.created_at'
                 )
                 ->where('u.role', 'doctor')
-                ->orderBy('u.created_at', 'desc');
+                ->orderBy('u.created_at', $request->sort == '0' ? 'asc' : 'desc');
 
             // Apply filters
             if ($request->has('name') && $request->name != '') {
@@ -158,6 +159,11 @@ class PatientController extends Controller
 
             if ($request->has('specialization') && $request->specialization != '') {
                 $query->where('d.specialization', $request->specialization);
+            }
+
+            // Add district filter
+            if ($request->has('district') && $request->district != '') {
+                $query->where('d.district', $request->district);
             }
 
             // Get the doctors first
@@ -188,14 +194,24 @@ class PatientController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            return view('front.doctors', compact('doctors', 'specializations'));
+            // Get unique districts for filter dropdown
+            $districts = DB::table('tbl_doctor')
+                ->join('users', 'tbl_doctor.doctor_id', '=', 'users.id')
+                ->where('users.role', 'doctor')
+                ->whereNotNull('tbl_doctor.district')
+                ->where('tbl_doctor.district', '!=', '')
+                ->select('tbl_doctor.district')
+                ->distinct()
+                ->orderBy('tbl_doctor.district')
+                ->pluck('district');
+
+            return view('front.doctors', compact('doctors', 'specializations', 'districts'));
 
         } catch (\Exception $e) {
             \Log::error('Error fetching doctors: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Something went wrong. Please try again.');
         }
     }
-
     
 
     public function createAppointment(Request $request, $id)

@@ -38,6 +38,19 @@
                                     @endforeach
                                 @endif
                             </select>
+                        </div>
+
+                        <!-- District Filter Added Here -->
+                        <div class="mb-4">
+                            <h2>District</h2>
+                            <select name="district" id="district" class="form-control">
+                                <option value="">Select District</option>
+                                @if ($districts->isNotEmpty())
+                                    @foreach ($districts as $district)
+                                    <option {{(Request::get('district')== $district)? 'selected' : ''}} value="{{$district}}">{{$district}}</option>
+                                    @endforeach
+                                @endif
+                            </select>
                         </div>                   
 
                         <button type="submit" class="btn btn-primary">Search</button>
@@ -78,6 +91,13 @@
                                             <div class="qualification-highlight mb-2">
                                                 <strong>Qualification:</strong> {{$doctor->qualification ?? 'Not specified'}}
                                             </div>
+
+                                            <!-- District Information Added Here -->
+                                            @if($doctor->district)
+                                            <div class="district-highlight mb-2">
+                                                <strong>District:</strong> {{$doctor->district}}
+                                            </div>
+                                            @endif
                                             
                                             <div class="bg-light p-3 border rounded">
                                                 <p class="mb-2">
@@ -237,6 +257,7 @@
         var url = '{{route("patient.findDoctors")}}?';
         var name = $("#name").val();
         var specialization = $("#specialization").val();
+        var district = $("#district").val(); // District added
         var sort = $("#sort").val();
 
         if (name != "") {
@@ -247,12 +268,21 @@
             url += 'specialization=' + encodeURIComponent(specialization) + '&';
         }
 
+        if (district != "") { // District condition added
+            url += 'district=' + encodeURIComponent(district) + '&';
+        }
+
         url += 'sort=' + sort;
 
         window.location.href = url;
     });
 
     $("#sort").change(function(){
+        $("#searchForm").submit();
+    });
+
+    // Auto-submit for district filter
+    $("#district").change(function(){
         $("#searchForm").submit();
     });
 
@@ -356,6 +386,16 @@
     .qualification-highlight {
         background-color: #fff3e0;
         border: 1px solid #ffe0b2;
+        padding: 8px;
+        border-radius: 5px;
+        margin: 5px 0;
+        text-align: left;
+        font-size: 0.9em;
+    }
+
+    .district-highlight {
+        background-color: #e8f5e8;
+        border: 1px solid #c8e6c9;
         padding: 8px;
         border-radius: 5px;
         margin: 5px 0;
