@@ -150,6 +150,7 @@ class PatientController extends Controller
                     'u.created_at'
                 )
                 ->where('u.role', 'doctor')
+                ->where('d.is_admin_confirmed', 1)
                 ->orderBy('u.created_at', $request->sort == '0' ? 'asc' : 'desc');
 
             // Apply filters

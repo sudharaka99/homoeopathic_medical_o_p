@@ -1,194 +1,188 @@
 @extends('front.layouts.app')
 
 @section('main')
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-0 fw-bold text-dark">Doctor Registration Approvals</h5>
-                            <p class="text-muted mb-0">Review and manage doctor registration requests</p>
-                        </div>
-                        <div class="text-muted">
+<section class="section-5 bg-2">
+    <div class="container py-5">
+        <div class="row">
+            <div class="col">
+                <nav aria-label="breadcrumb" class="rounded-3 p-3 mb-4">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
+                        <li class="breadcrumb-item active">Doctor Approvals</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-3">
+                @include('admin.slidebar')
+            </div>
+            <div class="col-lg-9">
+                @include('front.message')
+
+                <div class="card border-0 shadow mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">Doctor Registration Approvals</h2>
                             <span class="badge bg-primary">{{ $pendingDoctors->total() }} Pending</span>
                         </div>
-                    </div>
-                </div>
 
-                <div class="card-body p-0">
-                    {{-- @include('admin.message') --}}
-                    
-                    @if($pendingDoctors->isNotEmpty())
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="border-0 ps-4">Doctor Information</th>
-                                    <th class="border-0">License & Qualification</th>
-                                    <th class="border-0">Specialization</th>
-                                    <th class="border-0">Experience & Fee</th>
-                                    <th class="border-0">Status</th>
-                                    <th class="border-0 text-end pe-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($pendingDoctors as $doctor)
-                                <tr class="border-bottom">
-                                    <td class="ps-4">
-                                        <div class="d-flex align-items-start">
-                                            <div class="flex-shrink-0">
+                        @if($pendingDoctors->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Doctor Info</th>
+                                        <th>License & Qualification</th>
+                                        <th>Specialization</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($pendingDoctors as $doctor)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-start">
                                                 @if($doctor->profile_photo_path)
                                                     <img src="{{ asset('storage/'.$doctor->profile_photo_path) }}" 
                                                          alt="{{ $doctor->name }}" 
-                                                         class="rounded-circle" 
+                                                         class="rounded-circle me-3" 
                                                          width="60" height="60">
                                                 @else
-                                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
                                                          style="width: 60px; height: 60px;">
-                                                        <i class="fa fa-user-md fa-lg"></i>
+                                                        <i class="fa fa-user-md"></i>
                                                     </div>
                                                 @endif
+                                                <div>
+                                                    <h6 class="mb-1">{{ $doctor->name }}</h6>
+                                                    <p class="text-muted mb-1 small">
+                                                        <i class="fa fa-envelope me-1"></i>{{ $doctor->email }}
+                                                    </p>
+                                                    <p class="text-muted mb-1 small">
+                                                        <i class="fa fa-phone me-1"></i>{{ $doctor->mobile ?? 'N/A' }}
+                                                    </p>
+                                                    @if($doctor->clinic_name)
+                                                    <p class="text-muted mb-0 small">
+                                                        <i class="fa fa-hospital me-1"></i>{{ $doctor->clinic_name }}
+                                                    </p>
+                                                    @endif
+                                                </div>
                                             </div>
-                                            <div class="flex-grow-1 ms-3">
-                                                <h6 class="mb-1 fw-bold text-dark">{{ $doctor->name }}</h6>
-                                                <p class="text-muted mb-1 small">
-                                                    <i class="fa fa-envelope me-1"></i>{{ $doctor->email }}
-                                                </p>
-                                                <p class="text-muted mb-1 small">
-                                                    <i class="fa fa-phone me-1"></i>{{ $doctor->mobile ?? 'N/A' }}
-                                                </p>
-                                                @if($doctor->clinic_name)
-                                                <p class="text-muted mb-0 small">
-                                                    <i class="fa fa-hospital me-1"></i>{{ $doctor->clinic_name }}
-                                                </p>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </td>
-                                    
-                                    <td>
-                                        <div class="license-info">
+                                        </td>
+                                        
+                                        <td>
                                             @if($doctor->license_number)
                                             <div class="mb-2">
-                                                <strong class="text-dark d-block">License No:</strong>
-                                                <span class="text-muted">{{ $doctor->license_number }}</span>
+                                                <strong>License No:</strong>
+                                                <span class="text-muted d-block">{{ $doctor->license_number }}</span>
                                             </div>
                                             @endif
                                             
                                             @if($doctor->license_image)
                                             <div class="mb-2">
-                                                <strong class="text-dark d-block">License Image:</strong>
-                                                <a href="{{ asset('storage/'.$doctor->license_image) }}" 
-                                                   target="_blank" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="fa fa-eye me-1"></i>View
-                                                </a>
+                                                <strong>License Image:</strong>
+                                                <div class="mt-1">
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-primary view-license-image"
+                                                            data-image="{{ asset('storage/doctor_licenses/' . basename($doctor->license_image)) }}"
+                                                            data-doctor-name="{{ $doctor->name }}">
+                                                        <i class="fa fa-eye me-1"></i>View License
+                                                    </button>
+                                                </div>
                                             </div>
                                             @endif
                                             
                                             @if($doctor->qualification)
                                             <div>
-                                                <strong class="text-dark d-block">Qualification:</strong>
-                                                <span class="text-muted small">{{ $doctor->qualification }}</span>
+                                                <strong>Qualification:</strong>
+                                                <span class="text-muted d-block small">{{ $doctor->qualification }}</span>
                                             </div>
                                             @endif
-                                        </div>
-                                    </td>
-                                    
-                                    <td>
-                                        @if($doctor->specialization_name)
-                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">
-                                            {{ $doctor->specialization_name }}
-                                        </span>
-                                        @else
-                                        <span class="text-muted">Not specified</span>
-                                        @endif
+                                        </td>
                                         
-                                        @if($doctor->district)
-                                        <div class="mt-2">
-                                            <small class="text-muted">
-                                                <i class="fa fa-map-marker-alt me-1"></i>{{ $doctor->district }}
-                                            </small>
-                                        </div>
-                                        @endif
-                                    </td>
-                                    
-                                    <td>
-                                        <div class="experience-fee">
+                                        <td>
+                                            @if($doctor->specialization_name)
+                                            <span class="badge bg-info">
+                                                {{ $doctor->specialization_name }}
+                                            </span>
+                                            @else
+                                            <span class="text-muted">Not specified</span>
+                                            @endif
+                                            
                                             @if($doctor->years_experience)
-                                            <div class="mb-2">
-                                                <strong class="text-dark d-block">Experience:</strong>
-                                                <span class="text-success fw-medium">{{ $doctor->years_experience }} years</span>
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fa fa-briefcase me-1"></i>{{ $doctor->years_experience }} years exp.
+                                                </small>
                                             </div>
                                             @endif
                                             
                                             @if($doctor->appointment_fee)
-                                            <div>
-                                                <strong class="text-dark d-block">Appointment Fee:</strong>
-                                                <span class="text-primary fw-medium">Rs. {{ $doctor->appointment_fee }}</span>
+                                            <div class="mt-1">
+                                                <small class="text-primary">
+                                                    <i class="fa fa-money-bill me-1"></i>Rs. {{ $doctor->appointment_fee }}
+                                                </small>
                                             </div>
                                             @endif
-                                        </div>
-                                    </td>
-                                    
-                                    <td>
-                                        <span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25">
-                                            <i class="fa fa-clock me-1"></i>Pending Review
-                                        </span>
-                                        <div class="mt-1 small text-muted">
-                                            Registered: {{ $doctor->created_at->format('M d, Y') }}
-                                        </div>
-                                    </td>
-                                    
-                                    <td class="text-end pe-4">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" 
-                                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fa fa-cog me-1"></i>Actions
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow">
-                                                <li>
-                                                    <a class="dropdown-item view-doctor-details" 
-                                                       href="#" 
-                                                       data-bs-toggle="modal" 
-                                                       data-bs-target="#doctorDetailsModal"
-                                                       data-doctor-id="{{ $doctor->id }}">
-                                                        <i class="fa fa-eye text-primary me-2"></i>View Details
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item text-success approve-doctor" 
-                                                       href="#" 
-                                                       data-doctor-id="{{ $doctor->id }}"
-                                                       data-doctor-name="{{ $doctor->name }}">
-                                                        <i class="fa fa-check-circle text-success me-2"></i>Approve
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item text-danger reject-doctor" 
-                                                       href="#" 
-                                                       data-bs-toggle="modal" 
-                                                       data-bs-target="#rejectModal"
-                                                       data-doctor-id="{{ $doctor->id }}"
-                                                       data-doctor-name="{{ $doctor->name }}">
-                                                        <i class="fa fa-times-circle text-danger me-2"></i>Reject
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Pagination -->
-                    <div class="card-footer bg-white border-0 py-3">
-                        <div class="d-flex justify-content-between align-items-center">
+                                        </td>
+                                        
+                                        <td>
+                                            <span class="badge bg-warning">
+                                                <i class="fa fa-clock me-1"></i>Pending
+                                            </span>
+                                            <div class="mt-1 small text-muted">
+                                                {{ \Carbon\Carbon::parse($doctor->created_at)->format('M d, Y') }}
+                                            </div>
+                                        </td>
+                                        
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item text-success approve-doctor" 
+                                                           href="#" 
+                                                           data-doctor-id="{{ $doctor->id }}"
+                                                           data-doctor-name="{{ $doctor->name }}">
+                                                            <i class="fa fa-check-circle text-success me-2"></i>Approve
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger reject-doctor" 
+                                                           href="#" 
+                                                           data-bs-toggle="modal" 
+                                                           data-bs-target="#rejectModal"
+                                                           data-doctor-id="{{ $doctor->id }}"
+                                                           data-doctor-name="{{ $doctor->name }}">
+                                                            <i class="fa fa-times-circle text-danger me-2"></i>Reject
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item view-doctor-details" 
+                                                           href="#" 
+                                                           data-bs-toggle="modal" 
+                                                           data-bs-target="#doctorDetailsModal"
+                                                           data-doctor-id="{{ $doctor->id }}">
+                                                            <i class="fa fa-eye text-primary me-2"></i>View Details
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-4">
                             <div class="text-muted small">
                                 Showing {{ $pendingDoctors->firstItem() }} to {{ $pendingDoctors->lastItem() }} of {{ $pendingDoctors->total() }} requests
                             </div>
@@ -196,22 +190,43 @@
                                 {{ $pendingDoctors->links() }}
                             </div>
                         </div>
-                    </div>
-                    
-                    @else
-                    <!-- Empty State -->
-                    <div class="text-center py-5">
-                        <div class="empty-state-icon mb-4">
-                            <i class="fa fa-user-md text-muted" style="font-size: 4rem;"></i>
+                        
+                        @else
+                        <!-- Empty State -->
+                        <div class="text-center py-5">
+                            <div class="empty-state-icon mb-4">
+                                <i class="fa fa-user-md text-muted" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-muted mb-3">No Pending Approvals</h4>
+                            <p class="text-muted mb-4">All doctor registration requests have been processed.</p>
+                            <a href="{{ route('admin.dashboard') }}" class="btn btn-primary">
+                                <i class="fa fa-dashboard me-2"></i>Go to Dashboard
+                            </a>
                         </div>
-                        <h4 class="text-muted mb-3">No Pending Approvals</h4>
-                        <p class="text-muted mb-4">All doctor registration requests have been processed.</p>
-                        <a href="{{ route('admin.dashboard') }}" class="btn btn-primary">
-                            <i class="fa fa-dashboard me-2"></i>Go to Dashboard
-                        </a>
+                        @endif
                     </div>
-                    @endif
                 </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- License Image Modal -->
+<div class="modal fade" id="licenseImageModal" tabindex="-1" aria-labelledby="licenseImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="licenseImageModalLabel">License Image - <span id="licenseDoctorName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="licenseImage" src="" alt="License Image" class="img-fluid rounded" style="max-height: 70vh;">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a id="downloadLicense" href="#" class="btn btn-primary" download>
+                    <i class="fa fa-download me-1"></i>Download
+                </a>
             </div>
         </div>
     </div>
@@ -220,17 +235,23 @@
 <!-- Doctor Details Modal -->
 <div class="modal fade" id="doctorDetailsModal" tabindex="-1" aria-labelledby="doctorDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold" id="doctorDetailsModalLabel">
+                <h5 class="modal-title" id="doctorDetailsModalLabel">
                     <i class="fa fa-user-md me-2"></i>Doctor Details
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4" id="doctorDetailsContent">
                 <!-- Content will be loaded via AJAX -->
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading doctor details...</p>
+                </div>
             </div>
-            <div class="modal-footer border-top">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
@@ -240,9 +261,9 @@
 <!-- Reject Reason Modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title fw-bold" id="rejectModalLabel">
+                <h5 class="modal-title" id="rejectModalLabel">
                     <i class="fa fa-times-circle me-2"></i>Reject Doctor Registration
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -254,10 +275,10 @@
                     <p class="text-muted mb-3">You are rejecting: <strong id="rejectDoctorName"></strong></p>
                     
                     <div class="mb-3">
-                        <label for="reject_reason" class="form-label fw-semibold text-dark">
+                        <label for="reject_reason" class="form-label fw-semibold">
                             Reason for Rejection <span class="text-danger">*</span>
                         </label>
-                        <textarea class="form-control border-2" 
+                        <textarea class="form-control" 
                                   id="reject_reason" 
                                   name="reject_reason" 
                                   rows="4" 
@@ -266,7 +287,7 @@
                         <div class="form-text">This reason will be communicated to the doctor.</div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-danger">
                         <i class="fa fa-times-circle me-2"></i>Confirm Rejection
@@ -281,19 +302,44 @@
 @section('customJS')
 <script>
 $(document).ready(function() {
+    // View License Image
+    $('.view-license-image').on('click', function() {
+        const imageUrl = $(this).data('image');
+        const doctorName = $(this).data('doctor-name');
+        
+        console.log('Loading license image:', imageUrl);
+        
+        $('#licenseImage').attr('src', imageUrl);
+        $('#licenseDoctorName').text(doctorName);
+        $('#downloadLicense').attr('href', imageUrl);
+        $('#licenseImageModal').modal('show');
+    });
+
     // View Doctor Details
     $('.view-doctor-details').on('click', function() {
         const doctorId = $(this).data('doctor-id');
+        const doctorDetailsContent = $('#doctorDetailsContent');
+        
+        // Show loading
+        doctorDetailsContent.html(`
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading doctor details...</p>
+            </div>
+        `);
         
         $.ajax({
-            url: 'admin.doctorDetails',
+            url: '{{ route("admin.doctorDetails") }}',
             type: 'GET',
             data: { doctor_id: doctorId },
             success: function(response) {
-                $('#doctorDetailsContent').html(response);
+                doctorDetailsContent.html(response);
             },
-            error: function() {
-                $('#doctorDetailsContent').html(`
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                doctorDetailsContent.html(`
                     <div class="alert alert-danger">
                         <i class="fa fa-exclamation-triangle me-2"></i>
                         Failed to load doctor details. Please try again.
@@ -420,16 +466,9 @@ $(document).ready(function() {
 </script>
 
 <style>
-.empty-state-icon {
-    opacity: 0.6;
-}
-
-.license-info strong {
-    font-size: 0.85rem;
-}
-
-.experience-fee strong {
-    font-size: 0.85rem;
+.badge {
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 .table > :not(caption) > * > * {
@@ -437,45 +476,26 @@ $(document).ready(function() {
     padding: 1rem 0.75rem;
 }
 
-.table tbody tr {
-    transition: background-color 0.2s ease;
-}
-
 .table tbody tr:hover {
     background-color: #f8f9fa;
-}
-
-.badge {
-    font-size: 0.75rem;
-    font-weight: 500;
 }
 
 .btn-group .dropdown-menu {
     border: none;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
 }
 
-.btn-group .dropdown-item {
-    padding: 0.6rem 1rem;
-    border-radius: 4px;
-    margin: 2px 8px;
-    width: auto;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
+.empty-state-icon {
+    opacity: 0.6;
 }
 
-.btn-group .dropdown-item:hover {
-    background-color: #f8f9fa;
-    transform: translateX(2px);
+.view-license-image {
+    font-size: 0.8rem;
 }
 
-.modal-header {
-    border-bottom: 2px solid rgba(0,0,0,0.1);
-}
-
-.modal-footer {
-    border-top: 1px solid rgba(0,0,0,0.1);
+.modal-body img {
+    max-width: 100%;
+    height: auto;
 }
 </style>
 @endsection
