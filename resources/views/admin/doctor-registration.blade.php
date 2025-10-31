@@ -1,4 +1,4 @@
-@extends('admin.layouts.app')
+@extends('front.layouts.app')
 
 @section('main')
 <div class="container-fluid py-4">
@@ -18,7 +18,7 @@
                 </div>
 
                 <div class="card-body p-0">
-                    @include('admin.message')
+                    {{-- @include('admin.message') --}}
                     
                     @if($pendingDoctors->isNotEmpty())
                     <div class="table-responsive">
@@ -286,7 +286,7 @@ $(document).ready(function() {
         const doctorId = $(this).data('doctor-id');
         
         $.ajax({
-            url: '{{ route("admin.doctor.details") }}',
+            url: 'admin.doctorDetails',
             type: 'GET',
             data: { doctor_id: doctorId },
             success: function(response) {
@@ -321,7 +321,7 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '{{ route("admin.approve.doctor") }}',
+                    url: '{{ route("admin.approveDoctor") }}',
                     type: 'POST',
                     data: {
                         doctor_id: doctorId,
@@ -376,7 +376,7 @@ $(document).ready(function() {
         const formData = new FormData(this);
         
         $.ajax({
-            url: '{{ route("admin.reject.doctor") }}',
+            url: '{{ route("admin.rejectDoctor") }}',
             type: 'POST',
             data: formData,
             processData: false,

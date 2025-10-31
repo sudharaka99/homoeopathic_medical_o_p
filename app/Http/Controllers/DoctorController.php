@@ -547,6 +547,9 @@ public function updateDoctorProfile(Request $request)
             return redirect()->back()->with('error', 'Failed to delete availability slot.');
         }
     }
+
+
+
 }
 
 

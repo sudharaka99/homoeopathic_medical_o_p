@@ -49,6 +49,13 @@ Route::post('/update-password', [AccountController::class, 'updatePassword'])->n
 
 //admin
 Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+Route::get('/admin/doctors-list', [AdminController::class, 'doctorsList'])->name('admin.doctorslist');
+Route::get('/admin/pending-doctors', [AdminController::class, 'pendingDoctors'])->name('admin.pendingDoctors');
+Route::post('/admin/approve-doctor', [AdminController::class, 'approveDoctor'])->name('admin.approveDoctor');
+Route::post('/admin/reject-doctor', [AdminController::class, 'rejectDoctor'])->name('admin.rejectDoctor');
+Route::get('/admin/doctor-details', [AdminController::class, 'doctorDetails'])->name('admin.doctorDetails');
+
+
 
 
 //doctor

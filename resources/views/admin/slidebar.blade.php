@@ -21,7 +21,7 @@
                             <a href="{{ route('account.profile') }}">Account Settings</a>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center p-3">
-                            <a href="">Doctors Registration</a>
+                            <a href="{{ route('admin.pendingDoctors') }}">Doctors Registration</a>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center p-3">
                             <a href="">Manage Appointments</a>
