@@ -195,15 +195,20 @@
                                     @endfor
                                 </div>
                                 <small class="text-muted d-block mt-2">Click on stars to rate</small>
+                                @error('rating')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
 
                             <div class="form-group mb-3">
-                                <label for="feedback" class="form-label fw-bold">Your Feedback <span class="text-danger">*</span></label>
-                                <textarea name="feedback" id="feedback" class="form-control" rows="4" placeholder="Share your experience with this doctor..." required minlength="10"></textarea>
+                                <label for="feedback" class="form-label fw-bold">Your Feedback</label>
+                                <textarea name="feedback" id="feedback" class="form-control" rows="4" placeholder="Share your experience with this doctor... (Optional)"></textarea>
                                 <div class="d-flex justify-content-between mt-2">
-                                    <small class="text-muted">Minimum 10 characters</small>
                                     <small class="text-muted"><span id="charCount">0</span>/500 characters</small>
                                 </div>
+                                @error('feedback')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100 w-sm-auto" id="submitFeedbackBtn">
@@ -634,14 +639,9 @@ $(document).ready(function() {
         const feedbackText = $('#feedback').val().trim();
         const rating = $('input[name="rating"]:checked').val();
 
+        // Remove the minimum character requirement validation
         if (!rating) {
             messageText.text('Please select a rating.');
-            messageDiv.addClass('alert-danger d-block').removeClass('d-none alert-success');
-            return;
-        }
-
-        if (feedbackText.length < 10) {
-            messageText.text('Feedback must be at least 10 characters long.');
             messageDiv.addClass('alert-danger d-block').removeClass('d-none alert-success');
             return;
         }
