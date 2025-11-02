@@ -2,13 +2,13 @@
 
 @section('main')
 <section class="section-4 bg-light">    
-    <div class="container pt-5">
+    <div class="container pt-3 pt-md-5">
         <div class="row">
             <div class="col">
-                <nav aria-label="breadcrumb" class="rounded-3 p-3 bg-white shadow-sm">
+                <nav aria-label="breadcrumb" class="rounded-3 p-2 p-md-3 bg-white shadow-sm">
                     <ol class="breadcrumb mb-0">
                         <li class="breadcrumb-item">
-                            <a href="{{ route('patient.findDoctors') }}" class="text-primary">
+                            <a href="{{ route('patient.findDoctors') }}" class="text-primary text-decoration-none">
                                 <i class="fa fa-arrow-left" aria-hidden="true"></i> &nbsp;Back to Doctors
                             </a>
                         </li>
@@ -18,25 +18,27 @@
         </div> 
     </div>
 
-    <div class="container doctor_details_area py-4">
+    <div class="container doctor_details_area py-3 py-md-4">
         <div class="row">
             {{-- Left side --}}
-            <div class="col-md-8">
+            <div class="col-lg-8 mb-4 mb-lg-0">
                 @include('front.message')
 
                 <!-- Doctor Profile Card -->
                 <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body p-4">
-                        <div class="d-flex flex-column flex-sm-row align-items-center mb-4">
-                            <img 
-                                src="{{ $doctor->image ? asset('profile_pic/thumb/' . $doctor->image) : asset('assets/images/doctor.png') }}" 
-                                class="rounded-circle me-sm-3 mb-3 mb-sm-0 border" 
-                                width="120" 
-                                height="120" 
-                                alt="{{ $doctor->doctor_name }}'s Profile Image"
-                            >
-                            <div class="text-center text-sm-start flex-grow-1">
-                                <h3 class="mb-1">{{ $doctor->doctor_name }}</h3>
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex flex-column flex-md-row align-items-center mb-4">
+                            <div class="text-center mb-3 mb-md-0 me-md-4">
+                                <img 
+                                    src="{{ $doctor->image ? asset('profile_pic/thumb/' . $doctor->image) : asset('assets/images/doctor.png') }}" 
+                                    class="rounded-circle border" 
+                                    width="90" 
+                                    height="90" 
+                                    alt="{{ $doctor->doctor_name }}'s Profile Image"
+                                >
+                            </div>
+                            <div class="text-center text-md-start flex-grow-1">
+                                <h3 class="mb-1 h4">{{ $doctor->doctor_name }}</h3>
                                 <p class="mb-1 text-muted">{{ $doctor->specialization_name }}</p>
                                 <p class="mb-0 text-success small">
                                     <i class="fa fa-briefcase-medical me-1"></i> {{ $doctor->years_experience }} years of experience
@@ -94,7 +96,7 @@
                         @endif
 
                         <!-- Action Buttons -->
-                        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-start justify-content-sm-end pt-3 border-top">
+                        <div class="d-grid d-md-flex gap-2 justify-content-md-end pt-3 border-top">
                             @if(Auth::check())
                                 {{-- Book Appointment Button for Logged-in Users --}}
                                 <button type="button" class="btn btn-success" onclick="bookAppointment({{ $doctor->doctor_id  }})">
@@ -127,11 +129,11 @@
                 {{-- Feedback and Ratings Section --}}
                 <div class="card shadow-sm border-0 mt-4">
                     <div class="card-header bg-white border-bottom">
-                        <h4 class="mb-0 text-dark">
+                        <h4 class="mb-0 text-dark h5">
                             <i class="fa fa-star text-warning me-2"></i> Patient Feedback & Ratings
                         </h4>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body p-3 p-md-4">
                         @if($doctor->feedback->isNotEmpty())
                             <div class="feedback-summary mb-4">
                                 @php
@@ -178,20 +180,20 @@
                 @if(Auth::check())
                 <div class="card shadow-sm border-0 mt-4">
                     <div class="card-header bg-white border-bottom">
-                        <h4 class="mb-0 text-dark">
+                        <h4 class="mb-0 text-dark h5">
                             <i class="fa fa-pen me-2"></i> Submit Your Feedback
                         </h4>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body p-3 p-md-4">
                         <form id="feedbackForm" action="{{ route('doctor.feedback', $doctor->id) }}" method="POST" novalidate>
                             @csrf
                             <div class="form-group mb-3">
                                 <label for="rating" class="form-label fw-bold">Rate Your Experience <span class="text-danger">*</span></label>
-                                <div class="star-rating" role="group" aria-labelledby="rating-label">
+                                <div class="star-rating d-flex flex-row-reverse justify-content-end" role="group" aria-labelledby="rating-label">
                                     <span id="rating-label" class="d-none">Select your rating</span>
                                     @for($i = 5; $i >= 1; $i--)
                                         <input type="radio" name="rating" id="rating-{{ $i }}" value="{{ $i }}" required>
-                                        <label for="rating-{{ $i }}" class="fa fa-star" aria-label="Rate {{ $i }} stars" title="Rate {{ $i }} stars"></label>
+                                        <label for="rating-{{ $i }}" class="fa fa-star mx-1" aria-label="Rate {{ $i }} stars" title="Rate {{ $i }} stars"></label>
                                     @endfor
                                 </div>
                                 <small class="text-muted d-block mt-2">Click on stars to rate</small>
@@ -211,7 +213,7 @@
                                 @enderror
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 w-sm-auto" id="submitFeedbackBtn">
+                            <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitFeedbackBtn">
                                 <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
                                 <span class="btn-text">Submit Feedback</span>
                             </button>
@@ -226,10 +228,10 @@
             </div>
 
             {{-- Right side - Doctor Details Sidebar --}}
-            <div class="col-md-4">
+            <div class="col-lg-4">
                 <!-- Quick Info Card -->
-                <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
-                    <div class="card-body p-4">
+                <div class="card shadow-sm border-0 mb-4 sticky-lg-top" style="top: 20px;">
+                    <div class="card-body p-3 p-md-4">
                         <h5 class="mb-3 text-dark fw-bold">
                             <i class="fa fa-info-circle me-2"></i> Quick Details
                         </h5>
@@ -278,7 +280,7 @@
                 <!-- Contact Card -->
                 @if(!empty($doctor->mobile))
                 <div class="card shadow-sm border-0">
-                    <div class="card-body p-4">
+                    <div class="card-body p-3 p-md-4">
                         <h5 class="mb-3 text-dark fw-bold">
                             <i class="fa fa-phone me-2"></i> Contact Information
                         </h5>
@@ -378,18 +380,12 @@
 
 @section('customCSS')
 <style>
-/* Star Rating Styles */
-.star-rating {
-    display: flex;
-    direction: rtl;
-    justify-content: flex-start;
-    gap: 0.5rem;
-}
+/* Minimal custom CSS for star rating */
 .star-rating input {
     display: none;
 }
 .star-rating label {
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: #ddd;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -398,132 +394,22 @@
 .star-rating label:hover,
 .star-rating label:hover ~ label {
     color: #ffc107;
-    transform: scale(1.1);
 }
 .star-rating label:active {
     transform: scale(0.95);
 }
 
-/* Card Styles */
-.card {
-    border-radius: 10px;
-    overflow: hidden;
-}
-.card-header {
-    background-color: #f8f9fa !important;
-}
-
-/* Button Styles */
-.btn {
-    transition: all 0.3s ease;
-    font-weight: 500;
-}
-.btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
-    transform: translateY(-2px);
-}
-.btn-success {
-    background-color: #28a745;
-    border-color: #28a745;
-}
-.btn-success:hover {
-    background-color: #218838;
-    border-color: #1e7e34;
-    transform: translateY(-2px);
-}
-.btn-danger {
-    background-color: #dc3545;
-    border-color: #dc3545;
-}
-.btn-outline-primary:hover {
-    transform: translateY(-2px);
-}
-
-/* Form Styles */
-.form-control {
-    border-radius: 6px;
-    border: 1px solid #ced4da;
-    transition: border-color 0.3s ease;
-}
-.form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-.form-check-input {
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.form-check-input:checked {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-
-/* Feedback Styles */
-.feedback-summary {
-    background: linear-gradient(135deg, #fff9e6 0%, #fff 100%);
-    padding: 1rem;
-    border-radius: 8px;
-    border-left: 4px solid #ffc107;
-}
-
-/* Responsive Design */
+/* Responsive adjustments */
 @media (max-width: 768px) {
-    .col-md-4 {
-        margin-top: 2rem;
-    }
-    .sticky-top {
+    .sticky-lg-top {
         position: static !important;
     }
-    .d-flex.flex-column.flex-sm-row.gap-2 {
-        gap: 0.5rem;
-    }
-    .btn {
-        font-size: 0.9rem;
-        padding: 0.5rem 0.75rem;
-    }
-}
-@media (max-width: 576px) {
-    .d-flex.align-items-center.mb-4 img {
-        width: 80px;
-        height: 80px;
-    }
-    h3 {
-        font-size: 1.5rem;
-    }
-    .star-rating label {
-        font-size: 1.75rem;
-    }
-    .btn-group-vertical .btn {
-        width: 100%;
-    }
-    .text-center.text-sm-start {
-        text-align: center;
-    }
-}
-
-/* Loading Spinner */
-.spinner-border-sm {
-    width: 1rem;
-    height: 1rem;
-}
-
-/* Focus States for Accessibility */
-a:focus, button:focus, input:focus, textarea:focus {
-    outline: 2px solid #007bff;
-    outline-offset: 2px;
 }
 </style>
 @endsection
 
-
 @section('customJS')
 <script type="text/javascript">
-// Define bookAppointment function globally (outside document.ready)
 // Define bookAppointment function globally (outside document.ready)
 function bookAppointment(doctorId) {
     console.log('Booking appointment for doctor ID:', doctorId);
@@ -628,69 +514,272 @@ $(document).ready(function() {
         });
     });
 
+    
+// Feedback Form Handling
+$(document).ready(function() {
+    // Initialize feedback form
+    initializeFeedbackForm();
+    
+    // Check for existing feedback on page load
+    checkExistingFeedback();
+});
+
+function initializeFeedbackForm() {
+    // Character counter for feedback text
+    $('#feedback').on('input', function() {
+        const length = $(this).val().length;
+        $('#charCount').text(length);
+        
+        if (length > 500) {
+            $('#charCount').addClass('text-danger fw-bold');
+        } else {
+            $('#charCount').removeClass('text-danger fw-bold');
+        }
+    });
+
+    // Star rating interaction
+    $('.star-rating input').on('change', function() {
+        const selectedRating = $(this).val();
+        updateStarRating(selectedRating);
+    });
+
     // Feedback Form Submission
     $('#feedbackForm').on('submit', function(e) {
         e.preventDefault();
-        const form = $(this);
-        const submitBtn = $('#submitFeedbackBtn');
-        const spinner = submitBtn.find('.spinner-border');
-        const messageDiv = $('#feedbackMessage');
-        const messageText = $('#messageText');
-        const feedbackText = $('#feedback').val().trim();
-        const rating = $('input[name="rating"]:checked').val();
+        submitFeedback();
+    });
+}
 
-        // Remove the minimum character requirement validation
-        if (!rating) {
-            messageText.text('Please select a rating.');
-            messageDiv.addClass('alert-danger d-block').removeClass('d-none alert-success');
-            return;
-        }
+function updateStarRating(rating) {
+    // Reset all stars to default color
+    $('.star-rating label').css('color', '#ddd');
+    
+    // Color stars based on selected rating
+    $(`.star-rating input[value="${rating}"]`).siblings('label').each(function() {
+        $(this).css('color', '#ffc107');
+    });
+    
+    // Color previous stars for visual effect
+    $(`.star-rating input[value="${rating}"]`).nextAll('label').css('color', '#ffc107');
+}
 
-        spinner.removeClass('d-none');
-        submitBtn.prop('disabled', true);
-        messageDiv.addClass('d-none').removeClass('alert-success alert-danger');
-
+function checkExistingFeedback() {
+    const doctorId = {{ $doctor->id }};
+    const currentUserId = {{ Auth::id() ?? 'null' }};
+    
+    if (currentUserId && currentUserId !== 'null' && doctorId) {
+        // Check if user has existing feedback
         $.ajax({
-            url: form.attr('action'),
-            type: 'POST',
-            data: form.serialize(),
+            url: '{{ route("doctor.getUserFeedback", ":id") }}'.replace(':id', doctorId),
+            type: 'GET',
             dataType: 'json',
             success: function(response) {
-                messageText.text(response.message || 'Feedback submitted successfully!');
-                messageDiv.addClass('alert-success d-block').removeClass('d-none alert-danger');
-                form[0].reset();
-                $('.star-rating input').prop('checked', false);
-                $('.star-rating label').css('color', '#ddd');
-                
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Your feedback has been submitted successfully!',
-                    icon: 'success',
-                    confirmButtonColor: '#3085d6',
-                    timer: 2000,
-                    timerProgressBar: true
-                }).then(() => {
-                    window.location.reload();
-                });
+                if (response.status === 'success' && response.data) {
+                    populateExistingFeedback(response.data);
+                }
             },
             error: function(xhr) {
-                const errorMsg = xhr.responseJSON?.message || 'Failed to submit feedback. Please try again.';
-                messageText.text(errorMsg);
-                messageDiv.addClass('alert-danger d-block').removeClass('d-none alert-success');
-                
-                Swal.fire({
-                    title: 'Error!',
-                    text: errorMsg,
-                    icon: 'error',
-                    confirmButtonColor: '#d33',
-                });
-            },
-            complete: function() {
-                spinner.addClass('d-none');
-                submitBtn.prop('disabled', false);
+                console.log('No existing feedback found or error fetching data');
             }
         });
+    }
+}
+
+function populateExistingFeedback(feedbackData) {
+    // Set the rating
+    $(`#rating-${feedbackData.rating}`).prop('checked', true);
+    updateStarRating(feedbackData.rating);
+    
+    // Set the feedback text
+    if (feedbackData.feedback) {
+        $('#feedback').val(feedbackData.feedback);
+        $('#charCount').text(feedbackData.feedback.length);
+    }
+    
+    // Update button text
+    $('#submitFeedbackBtn .btn-text').text('Update Feedback');
+    
+    // Show info message
+    $('#feedbackForm').prepend(
+        '<div class="alert alert-info alert-dismissible fade show mb-4" role="alert">' +
+        '<i class="fa fa-info-circle me-2"></i>You have already submitted feedback for this doctor. You can update it below.' +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+        '</div>'
+    );
+}
+
+function submitFeedback() {
+    const form = $('#feedbackForm');
+    const submitBtn = $('#submitFeedbackBtn');
+    const spinner = submitBtn.find('.spinner-border');
+    const btnText = submitBtn.find('.btn-text');
+    const messageDiv = $('#feedbackMessage');
+    const messageText = $('#messageText');
+    const rating = $('input[name="rating"]:checked').val();
+
+    // Basic validation
+    if (!rating) {
+        showMessage('Please select a rating.', 'error');
+        return;
+    }
+
+    // Show loading state
+    spinner.removeClass('d-none');
+    btnText.text('Submitting...');
+    submitBtn.prop('disabled', true);
+    
+    // Hide any previous messages
+    messageDiv.addClass('d-none').removeClass('alert-success alert-danger');
+
+    // Get form data
+    const formData = new FormData(form[0]);
+
+    $.ajax({
+        url: form.attr('action'),
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json',
+        success: function(response) {
+            if (response.status === 'success') {
+                handleSuccessResponse(response.message);
+            } else {
+                handleErrorResponse(response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            handleAjaxError(xhr, error);
+        },
+        complete: function() {
+            // Reset button state
+            if (!submitBtn.prop('disabled')) {
+                spinner.addClass('d-none');
+                btnText.text($('#submitFeedbackBtn .btn-text').data('original-text') || 'Submit Feedback');
+                submitBtn.prop('disabled', false);
+            }
+        }
     });
+}
+
+function handleSuccessResponse(message) {
+    const messageDiv = $('#feedbackMessage');
+    const messageText = $('#messageText');
+    
+    // Show success message
+    messageText.text(message);
+    messageDiv.removeClass('alert-danger').addClass('alert-success d-block');
+    
+    // Update button to show it's been submitted
+    $('#submitFeedbackBtn .btn-text').text('Update Feedback');
+    $('#submitFeedbackBtn .btn-text').data('original-text', 'Update Feedback');
+    
+    // Show success alert
+    Swal.fire({
+        title: 'Success!',
+        text: message,
+        icon: 'success',
+        confirmButtonColor: '#3085d6',
+        timer: 2000,
+        timerProgressBar: true,
+    }).then(() => {
+        // Reload page to show updated feedback in the list
+        window.location.reload();
+    });
+}
+
+function handleErrorResponse(message) {
+    const messageDiv = $('#feedbackMessage');
+    const messageText = $('#messageText');
+    
+    messageText.text(message);
+    messageDiv.removeClass('alert-success').addClass('alert-danger d-block');
+    
+    Swal.fire({
+        title: 'Error!',
+        text: message,
+        icon: 'error',
+        confirmButtonColor: '#d33',
+    });
+}
+
+function handleAjaxError(xhr, error) {
+    console.error('AJAX Error:', error);
+    
+    let errorMessage = 'Failed to submit feedback. Please try again.';
+    
+    if (xhr.responseJSON && xhr.responseJSON.message) {
+        errorMessage = xhr.responseJSON.message;
+    } else if (xhr.status === 422) {
+        errorMessage = 'Validation error. Please check your input.';
+    } else if (xhr.status === 401) {
+        errorMessage = 'Please login to submit feedback.';
+        // Redirect to login page after delay
+        setTimeout(() => {
+            window.location.href = '{{ route("account.login") }}';
+        }, 2000);
+    } else if (xhr.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+    }
+    
+    handleErrorResponse(errorMessage);
+}
+
+function showMessage(message, type = 'error') {
+    const messageDiv = $('#feedbackMessage');
+    const messageText = $('#messageText');
+    
+    messageText.text(message);
+    
+    if (type === 'success') {
+        messageDiv.removeClass('alert-danger').addClass('alert-success d-block');
+    } else {
+        messageDiv.removeClass('alert-success').addClass('alert-danger d-block');
+    }
+    
+    // Auto-hide message after 5 seconds
+    setTimeout(() => {
+        messageDiv.addClass('d-none');
+    }, 5000);
+}
+
+// Utility function to reset feedback form
+function resetFeedbackForm() {
+    $('#feedbackForm')[0].reset();
+    $('.star-rating input').prop('checked', false);
+    $('.star-rating label').css('color', '#ddd');
+    $('#charCount').text('0');
+    $('#feedbackMessage').addClass('d-none');
+    $('#submitFeedbackBtn .btn-text').text('Submit Feedback');
+    $('#submitFeedbackBtn .btn-text').data('original-text', 'Submit Feedback');
+    $('.alert-info').remove();
+}
+
+// Star rating interaction improvement
+$('.star-rating input').on('change', function() {
+    const selectedRating = $(this).val();
+    $('.star-rating label').css('color', '#ddd');
+    
+    // Color all stars up to the selected one
+    $(this).siblings('label').each(function() {
+        $(this).css('color', '#ffc107');
+    });
+    
+    // Also color previous stars (for RTL effect)
+    $(this).nextAll('label').css('color', '#ffc107');
+});
+
+// Character counter for feedback text
+$('#feedback').on('input', function() {
+    const length = $(this).val().length;
+    $('#charCount').text(length);
+    
+    if (length > 500) {
+        $('#charCount').addClass('text-danger fw-bold');
+    } else {
+        $('#charCount').removeClass('text-danger fw-bold');
+    }
+});
 
     // Reset modal when closed
     $('#saveDoctorModal').on('hidden.bs.modal', function() {

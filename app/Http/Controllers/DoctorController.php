@@ -198,34 +198,105 @@ public function updateDoctorProfile(Request $request)
 
     public function storeFeedback(Request $request, $id)
     {
+        // Check if user is authenticated
         if (!Auth::check()) {
-            return redirect()->back()->with('error', 'Please login to submit feedback.');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Please login to submit feedback.'
+            ], 401);
         }
 
+        // Validate the request
         $validator = Validator::make($request->all(), [
             'rating'   => 'required|integer|min:1|max:5',
             'feedback' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()->with('error', 'Invalid feedback data.');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Please select a rating.'
+            ], 422);
         }
 
         try {
-            DB::table('tbl_feedback')->insert([
-                'doctor_id' => $id,
-                'user_id'   => Auth::id(),
-                'rating'    => $request->rating,
-                'feedback'  => $request->feedback,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // Check if user already submitted feedback for this doctor
+            $existingFeedback = DB::table('tbl_feedback')
+                ->where('doctor_id', $id)
+                ->where('user_id', Auth::id())
+                ->first();
 
-            return redirect()->back()->with('success', 'Your feedback has been submitted successfully!');
+            if ($existingFeedback) {
+                // Update existing feedback
+                DB::table('tbl_feedback')
+                    ->where('id', $existingFeedback->id)
+                    ->update([
+                        'rating' => $request->rating,
+                        'feedback' => $request->feedback,
+                        'updated_at' => now(),
+                    ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Your feedback has been updated successfully!'
+                ]);
+            } else {
+                // Insert new feedback
+                DB::table('tbl_feedback')->insert([
+                    'doctor_id' => $id,
+                    'user_id'   => Auth::id(),
+                    'rating'    => $request->rating,
+                    'feedback'  => $request->feedback,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Your feedback has been submitted successfully!'
+                ]);
+            }
+
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Something went wrong. Please try again later.');
+            Log::error('Feedback submission error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
         }
     }
+
+    public function getUserFeedback($doctorId)
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not authenticated'
+            ], 401);
+        }
+
+        try {
+            $feedback = DB::table('tbl_feedback')
+                ->where('doctor_id', $doctorId)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $feedback
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get feedback error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch feedback'
+            ], 500);
+        }
+    }
+
 
 
     // Show add availability page

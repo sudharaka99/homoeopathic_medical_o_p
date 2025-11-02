@@ -74,7 +74,11 @@ Route::delete('/doctor/availability/delete/{id}', [DoctorController::class, 'del
 
 
 
+// Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])->name('doctor.feedback');
+
+// Feedback Routes
 Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])->name('doctor.feedback');
+Route::get('/doctor/{id}/user-feedback', [DoctorController::class, 'getUserFeedback'])->name('doctor.getUserFeedback');
 Route::get('/doctor/{id}', [DoctorController::class, 'doctorDetailsShow'])->name('doctor.details');
 
 
