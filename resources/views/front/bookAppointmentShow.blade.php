@@ -22,7 +22,6 @@
                             </div>
                         </nav>
 
-
                         <!-- Session Booking Table -->
                         <div class="row">
                             <div class="col-lg-12">
@@ -53,12 +52,16 @@
                                                             <th>End Time</th>
                                                             <th>Duration</th>
                                                             <th>Available Tokens</th>
+                                                            <th>Fee</th>
                                                             <th>Status</th>
                                                             <th class="text-center">Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         @foreach ($avalabilityList as $availability)
+                                                            @php
+                                                                $doctor = $doctors->first();
+                                                            @endphp
                                                             <tr>
                                                                 <td class="fw-bold">
                                                                     {{ \Carbon\Carbon::parse($availability->date)->format('M d, Y') }}
@@ -80,6 +83,9 @@
                                                                     <span class="badge bg-secondary">{{ $availability->number_of_tokens }}</span>
                                                                 </td>
                                                                 <td>
+                                                                    <strong>RS {{ $doctor->appointment_fee ?? '0' }}</strong>
+                                                                </td>
+                                                                <td>
                                                                     @if($availability->status == 'available')
                                                                         <span class="badge bg-success">Available</span>
                                                                     @else
@@ -92,6 +98,9 @@
                                                                                 data-bs-toggle="modal" 
                                                                                 data-bs-target="#bookTokenModal"
                                                                                 data-availability-id="{{ $availability->id }}"
+                                                                                data-doctor-id="{{ $doctor->id ?? '' }}"
+                                                                                data-doctor-name="{{ $doctor->doctor_name ?? 'Doctor' }}"
+                                                                                data-appointment-fee="{{ $doctor->appointment_fee ?? 0 }}"
                                                                                 data-date="{{ \Carbon\Carbon::parse($availability->date)->format('M d, Y') }}"
                                                                                 data-time="{{ \Carbon\Carbon::parse($availability->start_time_slot)->format('h:i A') }} - {{ \Carbon\Carbon::parse($availability->end_time_slot)->format('h:i A') }}"
                                                                                 data-tokens="{{ $availability->number_of_tokens }}">
@@ -137,15 +146,57 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="" method="POST" id="bookTokenForm">
+            <form action="{{ route('patient.book.appointment') }}" method="POST" id="bookTokenForm">
                 @csrf
                 <input type="hidden" name="availability_id" id="availability_id">
+                <input type="hidden" name="doctor_id" id="doctor_id">
+                <input type="hidden" name="appointment_fee" id="appointment_fee">
+                
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <h6 class="alert-heading mb-2">Appointment Details</h6>
-                        <p class="mb-1"><strong>Doctor:</strong> Dr. {{ $doctor->doctor_name ?? 'Doctor' }}</p>
-                        <p class="mb-1" id="slotDate"></p>
-                        <p class="mb-0" id="slotTime"></p>
+                        <p class="mb-1"><strong>Doctor:</strong> <span id="doctorName">Dr. Name</span></p>
+                        <p class="mb-1" id="slotDate">Date: </p>
+                        <p class="mb-0" id="slotTime">Time: </p>
+                        <p class="mb-0 mt-2"><strong>Fee:</strong> RS <span id="feeAmount">0</span></p>
+                    </div>
+                    
+                    <!-- Payment Method Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Payment Method</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="payment_method" id="stripePayment" value="stripe" checked>
+                            <label class="form-check-label" for="stripePayment">
+                                <i class="fab fa-cc-stripe me-1"></i> Credit/Debit Card (Stripe)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="payment_method" id="paypalPayment" value="paypal">
+                            <label class="form-check-label" for="paypalPayment">
+                                <i class="fab fa-paypal me-1"></i> PayPal
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Stripe Card Elements -->
+                    <div id="stripePaymentSection">
+                        <div class="mb-3">
+                            <label for="card-element" class="form-label">Card Details</label>
+                            <div id="card-element" class="form-control p-3" style="height: 50px;">
+                                <!-- Stripe Elements will be inserted here -->
+                            </div>
+                            <div id="card-errors" class="text-danger mt-2 small"></div>
+                        </div>
+                    </div>
+
+                    <!-- PayPal Section -->
+                    <div id="paypalPaymentSection" style="display: none;">
+                        <div class="alert alert-warning">
+                            <small>
+                                <i class="fa fa-info-circle me-1"></i>
+                                You will be redirected to PayPal to complete your payment.
+                            </small>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -164,12 +215,123 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fa fa-check me-1"></i>Confirm Booking
+                    <button type="submit" class="btn btn-primary" id="submitBookingBtn">
+                        <i class="fa fa-credit-card me-1"></i>Pay & Confirm Booking
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    // Initialize Stripe
+    const stripe = Stripe('{{ config('services.stripe.key') }}');
+    const elements = stripe.elements();
+    
+    // Create card element
+    const cardElement = elements.create('card', {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                    color: '#aab7c4',
+                },
+            },
+        },
+    });
+
+    // Mount card element
+    cardElement.mount('#card-element');
+
+    // Handle real-time validation errors from the card Element
+    cardElement.on('change', function(event) {
+        const displayError = document.getElementById('card-errors');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
+
+    // Payment method toggle
+    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'stripe') {
+                document.getElementById('stripePaymentSection').style.display = 'block';
+                document.getElementById('paypalPaymentSection').style.display = 'none';
+            } else {
+                document.getElementById('stripePaymentSection').style.display = 'none';
+                document.getElementById('paypalPaymentSection').style.display = 'block';
+            }
+        });
+    });
+
+    // Book button click handler - FIXED VERSION
+    document.querySelectorAll('.book-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const availabilityId = this.getAttribute('data-availability-id');
+            const doctorId = this.getAttribute('data-doctor-id');
+            const doctorName = this.getAttribute('data-doctor-name');
+            const appointmentFee = this.getAttribute('data-appointment-fee');
+            const date = this.getAttribute('data-date');
+            const time = this.getAttribute('data-time');
+            const tokens = this.getAttribute('data-tokens');
+
+            console.log('Doctor Fee:', appointmentFee); // Debug log
+
+            // Set form values
+            document.getElementById('availability_id').value = availabilityId;
+            document.getElementById('doctor_id').value = doctorId;
+            document.getElementById('appointment_fee').value = appointmentFee;
+            
+            // Display values in modal
+            document.getElementById('doctorName').textContent = 'Dr. ' + doctorName;
+            document.getElementById('slotDate').textContent = 'Date: ' + date;
+            document.getElementById('slotTime').textContent = 'Time: ' + time;
+            document.getElementById('feeAmount').textContent = appointmentFee;
+        });
+    });
+
+    // Form submission handler
+    document.getElementById('bookTokenForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBookingBtn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Processing...';
+
+        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+
+        if (paymentMethod === 'stripe') {
+            // Handle Stripe payment
+            const { paymentMethod, error } = await stripe.createPaymentMethod({
+                type: 'card',
+                card: cardElement,
+            });
+
+            if (error) {
+                document.getElementById('card-errors').textContent = error.message;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+
+            // Add payment method ID to form
+            const paymentInput = document.createElement('input');
+            paymentInput.setAttribute('type', 'hidden');
+            paymentInput.setAttribute('name', 'stripe_payment_method');
+            paymentInput.setAttribute('value', paymentMethod.id);
+            this.appendChild(paymentInput);
+        }
+
+        // Submit the form
+        this.submit();
+    });
+</script>
 @endsection

@@ -89,6 +89,9 @@ Route::get('/patient/find-doctors', [PatientController::class, 'findDoctors'])->
 Route::get('/create-appointment/{id}', [PatientController::class, 'createAppointment'])->name('patient.bookAppointment');
 Route::get('/patient/dashboard', [PatientController::class, 'dashboard'])->name('patient.dashboard');
 
+Route::post('/book-appointment', [PatientController::class, 'bookAppointment'])->name('patient.book.appointment');
+Route::get('/payment/success', [PatientController::class, 'paymentSuccess'])->name('payment.success');
+Route::get('/payment/cancel', [PatientController::class, 'paymentCancel'])->name('payment.cancel');
 
 Route::get('/health-tips/hydration', [PatientController::class, 'hydration'])->name('health-tips.hydration');
 Route::get('/health-tips/exercise', [PatientController::class, 'exercise'])->name('health-tips.exercise');

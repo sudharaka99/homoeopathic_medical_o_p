@@ -224,6 +224,7 @@ class PatientController extends Controller
                 ->where('d.doctor_id', $id)
                 ->select(
                     'u.name as doctor_name',
+                    'd.appointment_fee', 
                 )
                 ->get();
 
@@ -584,6 +585,136 @@ class PatientController extends Controller
         
         return $map[$documentType] ?? null;
     }
+
+//////////////////////////////////
+    public function bookAppointment(Request $request)
+    {
+        $request->validate([
+            'availability_id' => 'required|exists:availabilities,id',
+            'doctor_id' => 'required|exists:tbl_doctor,id',
+            'appointment_fee' => 'required|numeric',
+            'patient_notes' => 'nullable|string',
+            'payment_method' => 'required|in:stripe,paypal',
+            'stripe_payment_method' => 'required_if:payment_method,stripe'
+        ]);
+
+        try {
+            $availability = Availability::findOrFail($request->availability_id);
+            $doctor = Doctor::findOrFail($request->doctor_id);
+
+            // Check if slot is still available
+            if ($availability->number_of_tokens <= 0) {
+                return redirect()->back()->with('error', 'Sorry, this time slot is no longer available.');
+            }
+
+            // Process payment based on method
+            if ($request->payment_method === 'stripe') {
+                $paymentResult = $this->processStripePayment($request, $doctor);
+            } else {
+                $paymentResult = $this->processPayPalPayment($request, $doctor);
+            }
+
+            if (!$paymentResult['success']) {
+                return redirect()->back()->with('error', $paymentResult['message']);
+            }
+
+            // Create appointment record
+            $appointment = Appointment::create([
+                'patient_id' => Auth::id(),
+                'doctor_id' => $doctor->id,
+                'availability_id' => $availability->id,
+                'appointment_date' => $availability->date,
+                'appointment_time' => $availability->start_time_slot,
+                'patient_notes' => $request->patient_notes,
+                'appointment_fee' => $doctor->appointment_fee,
+                'payment_method' => $request->payment_method,
+                'payment_status' => 'completed',
+                'payment_id' => $paymentResult['payment_id'],
+                'status' => 'confirmed'
+            ]);
+
+            // Update availability tokens
+            $availability->decrement('number_of_tokens');
+            if ($availability->number_of_tokens <= 0) {
+                $availability->update(['status' => 'booked']);
+            }
+
+            return redirect()->route('patient.appointments')
+                           ->with('success', 'Appointment booked successfully!');
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Booking failed: ' . $e->getMessage());
+        }
+    }
+
+    private function processStripePayment($request, $doctor)
+    {
+        Stripe::setApiKey(config('services.stripe.secret'));
+
+        try {
+            // Create Payment Intent
+            $paymentIntent = PaymentIntent::create([
+                'amount' => $doctor->appointment_fee * 100, // Convert to cents
+                'currency' => 'usd',
+                'payment_method' => $request->stripe_payment_method,
+                'confirmation_method' => 'manual',
+                'confirm' => true,
+                'return_url' => route('payment.success'),
+                'metadata' => [
+                    'patient_id' => Auth::id(),
+                    'doctor_id' => $doctor->id,
+                    'appointment_type' => 'consultation'
+                ]
+            ]);
+
+            if ($paymentIntent->status === 'succeeded') {
+                return [
+                    'success' => true,
+                    'payment_id' => $paymentIntent->id,
+                    'message' => 'Payment successful'
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Payment failed: ' . $paymentIntent->status
+            ];
+
+        } catch (CardException $e) {
+            return [
+                'success' => false,
+                'message' => 'Card declined: ' . $e->getMessage()
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Payment error: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    private function processPayPalPayment($request, $doctor)
+    {
+        // Implement PayPal payment logic here
+        // This is a simplified version - you'll need to integrate PayPal SDK
+        
+        return [
+            'success' => true,
+            'payment_id' => 'paypal_' . uniqid(),
+            'message' => 'PayPal payment processed'
+        ];
+    }
+
+    public function paymentSuccess()
+    {
+        return view('front.payment.success');
+    }
+
+    public function paymentCancel()
+    {
+        return view('front.payment.cancel');
+    }
+
 }
 
 
