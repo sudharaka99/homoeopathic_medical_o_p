@@ -86,7 +86,14 @@ Route::get('/doctor/{id}', [DoctorController::class, 'doctorDetailsShow'])->name
 Route::post('/patient/save-doctor', [PatientController::class, 'saveDoctor'])->name('patient.saveDoctor');
 Route::get('/account/saved-doctors/{id}', [PatientController::class, 'savedDoctors'])->name('account.savedDoctors');
 Route::get('/patient/find-doctors', [PatientController::class, 'findDoctors'])->name('patient.findDoctors');
+
+
+
 Route::get('/create-appointment/{id}', [PatientController::class, 'createAppointment'])->name('patient.bookAppointment');
+Route::get('/patient/get-availability-details/{id}', [PatientController::class, 'getAvailabilityDetails'])->name('patient.get.availability.details');
+Route::post('/create-payment-intent', [PatientController::class, 'createPaymentIntent'])->name('patient.create.payment.intent');
+Route::post('/book-appointment', [PatientController::class, 'bookAppointment'])->name('patient.book.appointment');
+
 Route::get('/patient/dashboard', [PatientController::class, 'dashboard'])->name('patient.dashboard');
 
 Route::post('/book-appointment', [PatientController::class, 'bookAppointment'])->name('patient.book.appointment');

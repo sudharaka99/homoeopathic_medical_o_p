@@ -94,17 +94,10 @@
                                                                 </td>
                                                                 <td class="text-center">
                                                                     @if($availability->status == 'available' && $availability->number_of_tokens > 0)
-                                                                        <button class="btn btn-primary btn-sm book-btn" 
-                                                                                data-bs-toggle="modal" 
-                                                                                data-bs-target="#bookTokenModal"
+                                                                        <button type="button" class="btn btn-primary btn-sm book-btn" 
                                                                                 data-availability-id="{{ $availability->id }}"
-                                                                                data-doctor-id="{{ $doctor->id ?? '' }}"
-                                                                                data-doctor-name="{{ $doctor->doctor_name ?? 'Doctor' }}"
-                                                                                data-appointment-fee="{{ $doctor->appointment_fee ?? 0 }}"
-                                                                                data-date="{{ \Carbon\Carbon::parse($availability->date)->format('M d, Y') }}"
-                                                                                data-time="{{ \Carbon\Carbon::parse($availability->start_time_slot)->format('h:i A') }} - {{ \Carbon\Carbon::parse($availability->end_time_slot)->format('h:i A') }}"
-                                                                                data-tokens="{{ $availability->number_of_tokens }}">
-                                                                            <i class="fa fa-calendar-plus me-1"></i> Book
+                                                                                title="Book Appointment">
+                                                                            <i class="fa fa-calendar-plus me-1"></i>Book
                                                                         </button>
                                                                     @else
                                                                         <span class="badge bg-secondary">Not Available</span>
@@ -151,14 +144,15 @@
                 <input type="hidden" name="availability_id" id="availability_id">
                 <input type="hidden" name="doctor_id" id="doctor_id">
                 <input type="hidden" name="appointment_fee" id="appointment_fee">
+                <input type="hidden" name="stripe_payment_intent_id" id="stripe_payment_intent_id">
                 
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <h6 class="alert-heading mb-2">Appointment Details</h6>
-                        <p class="mb-1"><strong>Doctor:</strong> <span id="doctorName">Dr. Name</span></p>
-                        <p class="mb-1" id="slotDate">Date: </p>
-                        <p class="mb-0" id="slotTime">Time: </p>
-                        <p class="mb-0 mt-2"><strong>Fee:</strong> RS <span id="feeAmount">0</span></p>
+                        <p class="mb-1"><strong>Doctor:</strong> <span id="doctorName">Loading...</span></p>
+                        <p class="mb-1"><strong>Date:</strong> <span id="slotDate">Loading...</span></p>
+                        <p class="mb-1"><strong>Time:</strong> <span id="slotTime">Loading...</span></p>
+                        <p class="mb-0"><strong>Fee:</strong> RS <span id="feeAmount">Loading...</span></p>
                     </div>
                     
                     <!-- Payment Method Selection -->
@@ -178,14 +172,14 @@
                         </div>
                     </div>
 
-                    <!-- Stripe Card Elements -->
+                    <!-- Stripe Payment Element -->
                     <div id="stripePaymentSection">
                         <div class="mb-3">
-                            <label for="card-element" class="form-label">Card Details</label>
-                            <div id="card-element" class="form-control p-3" style="height: 50px;">
-                                <!-- Stripe Elements will be inserted here -->
+                            <label class="form-label">Payment Details</label>
+                            <div id="payment-element" class="p-3 border rounded">
+                                <!-- Stripe Payment Element will be inserted here -->
                             </div>
-                            <div id="card-errors" class="text-danger mt-2 small"></div>
+                            <div id="payment-errors" class="text-danger mt-2 small"></div>
                         </div>
                     </div>
 
@@ -225,113 +219,179 @@
 </div>
 @endsection
 
-@section('scripts')
+@section('customJS')
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-    // Initialize Stripe
-    const stripe = Stripe('{{ config('services.stripe.key') }}');
-    const elements = stripe.elements();
-    
-    // Create card element
-    const cardElement = elements.create('card', {
-        style: {
-            base: {
-                fontSize: '16px',
-                color: '#424770',
-                '::placeholder': {
-                    color: '#aab7c4',
-                },
-            },
-        },
-    });
+// Initialize Stripe
+const stripe = Stripe('{{ config('services.stripe.key') }}');
+let elements;
 
-    // Mount card element
-    cardElement.mount('#card-element');
-
-    // Handle real-time validation errors from the card Element
-    cardElement.on('change', function(event) {
-        const displayError = document.getElementById('card-errors');
-        if (event.error) {
-            displayError.textContent = event.error.message;
-        } else {
-            displayError.textContent = '';
-        }
-    });
+$(document).ready(function() {
+    console.log('Document ready - book appointment page loaded');
 
     // Payment method toggle
-    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'stripe') {
-                document.getElementById('stripePaymentSection').style.display = 'block';
-                document.getElementById('paypalPaymentSection').style.display = 'none';
-            } else {
-                document.getElementById('stripePaymentSection').style.display = 'none';
-                document.getElementById('paypalPaymentSection').style.display = 'block';
-            }
-        });
+    $('input[name="payment_method"]').on('change', function() {
+        if ($(this).val() === 'stripe') {
+            $('#stripePaymentSection').show();
+            $('#paypalPaymentSection').hide();
+        } else {
+            $('#stripePaymentSection').hide();
+            $('#paypalPaymentSection').show();
+        }
     });
 
-    // Book button click handler - FIXED VERSION
-    document.querySelectorAll('.book-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const availabilityId = this.getAttribute('data-availability-id');
-            const doctorId = this.getAttribute('data-doctor-id');
-            const doctorName = this.getAttribute('data-doctor-name');
-            const appointmentFee = this.getAttribute('data-appointment-fee');
-            const date = this.getAttribute('data-date');
-            const time = this.getAttribute('data-time');
-            const tokens = this.getAttribute('data-tokens');
-
-            console.log('Doctor Fee:', appointmentFee); // Debug log
-
-            // Set form values
-            document.getElementById('availability_id').value = availabilityId;
-            document.getElementById('doctor_id').value = doctorId;
-            document.getElementById('appointment_fee').value = appointmentFee;
-            
-            // Display values in modal
-            document.getElementById('doctorName').textContent = 'Dr. ' + doctorName;
-            document.getElementById('slotDate').textContent = 'Date: ' + date;
-            document.getElementById('slotTime').textContent = 'Time: ' + time;
-            document.getElementById('feeAmount').textContent = appointmentFee;
-        });
-    });
-
-    // Form submission handler
-    document.getElementById('bookTokenForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    // Book button click handler
+    $(document).on('click', '.book-btn', async function() {
+        console.log('Book button clicked');
         
-        const submitBtn = document.getElementById('submitBookingBtn');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Processing...';
-
-        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
-
-        if (paymentMethod === 'stripe') {
-            // Handle Stripe payment
-            const { paymentMethod, error } = await stripe.createPaymentMethod({
-                type: 'card',
-                card: cardElement,
-            });
-
-            if (error) {
-                document.getElementById('card-errors').textContent = error.message;
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-                return;
-            }
-
-            // Add payment method ID to form
-            const paymentInput = document.createElement('input');
-            paymentInput.setAttribute('type', 'hidden');
-            paymentInput.setAttribute('name', 'stripe_payment_method');
-            paymentInput.setAttribute('value', paymentMethod.id);
-            this.appendChild(paymentInput);
+        const availabilityId = $(this).data('availability-id');
+        console.log('Availability ID:', availabilityId);
+        
+        if (!availabilityId) {
+            alert('Error: No availability ID found');
+            return;
         }
 
-        // Submit the form
-        this.submit();
+        // Show loading state in modal
+        $('#doctorName').text('Loading...');
+        $('#slotDate').text('Loading...');
+        $('#slotTime').text('Loading...');
+        $('#feeAmount').text('Loading...');
+        
+        const submitBtn = $('#submitBookingBtn');
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fa fa-spinner fa-spin me-1"></i>Loading...');
+
+        // Show modal immediately
+        $('#bookTokenModal').modal('show');
+
+        try {
+            // Fetch availability details
+            const availabilityResponse = await $.ajax({
+                url: '/patient/get-availability-details/' + availabilityId,
+                type: 'GET'
+            });
+
+            console.log('Availability response:', availabilityResponse);
+
+            if (availabilityResponse.success) {
+                const availability = availabilityResponse.availability;
+                const doctor = availabilityResponse.doctor;
+
+                // Set form values
+                $('#availability_id').val(availability.id);
+                $('#doctor_id').val(availability.doctor_id);
+                $('#appointment_fee').val(doctor.appointment_fee);
+                
+                // Display values in modal
+                $('#doctorName').text('Dr. ' + doctor.doctor_name);
+                $('#slotDate').text(availability.formatted_date);
+                $('#slotTime').text(availability.formatted_time);
+                $('#feeAmount').text(doctor.appointment_fee);
+
+                // Initialize Stripe Payment Element
+                await initializeStripePayment(availability.id, doctor.appointment_fee);
+
+                // Enable submit button
+                submitBtn.prop('disabled', false);
+                submitBtn.html('<i class="fa fa-credit-card me-1"></i>Pay & Confirm Booking');
+                
+            } else {
+                throw new Error(availabilityResponse.message || 'Failed to load availability details');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+            $('#bookTokenModal').modal('hide');
+        }
     });
+
+    // Initialize Stripe Payment Element
+    async function initializeStripePayment(availabilityId, amount) {
+        try {
+            // Create payment intent
+            const response = await $.ajax({
+                url: '{{ route("patient.create.payment.intent") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    availability_id: availabilityId,
+                    amount: amount
+                }
+            });
+
+            console.log('Payment intent response:', response);
+
+            if (response.success) {
+                // Store payment intent ID
+                $('#stripe_payment_intent_id').val(response.paymentIntentId);
+
+                // Initialize Stripe Elements
+                elements = stripe.elements({
+                    clientSecret: response.clientSecret,
+                    appearance: {
+                        theme: 'stripe',
+                    },
+                });
+
+                // Create and mount the Payment Element
+                const paymentElement = elements.create('payment');
+                paymentElement.mount('#payment-element');
+
+                console.log('Stripe Payment Element mounted successfully');
+            } else {
+                throw new Error(response.message || 'Failed to initialize payment');
+            }
+        } catch (error) {
+            console.error('Stripe initialization error:', error);
+            throw new Error('Payment initialization failed: ' + error.message);
+        }
+    }
+
+    // Form submission handler
+    $('#bookTokenForm').on('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = $('#submitBookingBtn');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fa fa-spinner fa-spin me-1"></i>Processing Payment...');
+
+        const paymentMethod = $('input[name="payment_method"]:checked').val();
+
+        try {
+            if (paymentMethod === 'stripe') {
+                // Confirm Stripe payment
+                const { error } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: '{{ url("/booking-success") }}',
+                    },
+                    redirect: 'if_required'
+                });
+
+                if (error) {
+                    throw new Error(error.message);
+                }
+
+                console.log('Stripe payment confirmed successfully');
+            }
+
+            // Submit the form
+            console.log('Submitting booking form...');
+            this.submit();
+
+        } catch (error) {
+            console.error('Payment error:', error);
+            $('#payment-errors').text(error.message);
+            submitBtn.prop('disabled', false);
+            submitBtn.html(originalText);
+        }
+    });
+
+    // Debug info
+    console.log('Book buttons found:', $('.book-btn').length);
+    console.log('Stripe key:', '{{ config('services.stripe.key') ? "Set" : "Not set" }}');
+});
 </script>
 @endsection
