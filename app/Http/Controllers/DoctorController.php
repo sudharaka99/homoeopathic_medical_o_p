@@ -320,15 +320,37 @@ public function updateDoctorProfile(Request $request)
                 ->where('d.doctor_id', Auth::id())
                 ->first();
 
-            // Get existing availabilities for current and future dates
-            $availabilities = DB::table('tbl_availability')
+            $today = now()->format('Y-m-d');
+            
+            // Get past availabilities (before today) - ALL records
+            $pastAvailabilities = DB::table('tbl_availability')
                 ->where('doctor_id', Auth::id())
-                ->where('date', '>=', now()->format('Y-m-d'))
+                ->where('date', '<', $today)
+                ->orderBy('date', 'desc')
+                ->orderBy('start_time_slot', 'asc')
+                ->get();
+
+            // Get today's availabilities
+            $todayAvailabilities = DB::table('tbl_availability')
+                ->where('doctor_id', Auth::id())
+                ->where('date', $today)
+                ->orderBy('start_time_slot', 'asc')
+                ->get();
+
+            // Get future availabilities (after today)
+            $futureAvailabilities = DB::table('tbl_availability')
+                ->where('doctor_id', Auth::id())
+                ->where('date', '>', $today)
                 ->orderBy('date', 'asc')
                 ->orderBy('start_time_slot', 'asc')
                 ->get();
 
-            return view('front.account.doctor.addAvalability', compact('doctor', 'availabilities'));
+            return view('front.account.doctor.addAvalability', compact(
+                'doctor', 
+                'pastAvailabilities', 
+                'todayAvailabilities', 
+                'futureAvailabilities'
+            ));
 
         } catch (\Exception $e) {
             Log::error('Error in addAvailability: ' . $e->getMessage());
@@ -616,6 +638,151 @@ public function updateDoctorProfile(Request $request)
             DB::rollback();
             Log::error('Error deleting availability: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to delete availability slot.');
+        }
+    }
+
+
+
+
+   public function manageAppointments()
+    {
+        try {
+            $doctorId = Auth::id();
+            
+            // Get doctor's appointments with patient details
+            $appointments = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+                ->join('users as u', 'da.user_id', '=', 'u.id')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->where('d.doctor_id', $doctorId)
+                ->select(
+                    'da.id',
+                    'da.appointment_date',
+                    'da.start_time',
+                    'da.end_time',
+                    'da.fee',
+                    'da.token_number',
+                    'da.status',
+                    'da.notes',
+                    'da.created_at',
+                    'da.updated_at',
+                    'u.name as patient_name',
+                    'u.email as patient_email',
+                    'av.date as availability_date',
+                    'av.start_time_slot',
+                    'av.end_time_slot',
+                    'av.number_of_tokens'
+                )
+                ->orderBy('da.appointment_date', 'desc')
+                ->orderBy('da.start_time', 'desc')
+                ->get();
+
+            // Group appointments by status
+            $pendingAppointments = $appointments->where('status', 'pending');
+            $confirmedAppointments = $appointments->where('status', 'confirmed');
+            $completedAppointments = $appointments->where('status', 'completed');
+            $cancelledAppointments = $appointments->where('status', 'cancelled');
+
+            return view('front.account.doctor.manage-appointment', compact(
+                'pendingAppointments',
+                'confirmedAppointments', 
+                'completedAppointments',
+                'cancelledAppointments',
+                'appointments'
+            ));
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching doctor appointments: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load appointments.');
+        }
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        DB::beginTransaction();
+        try {
+            $request->validate([
+                'status' => 'required|in:confirmed,cancelled,completed'
+            ]);
+
+            $doctorId = Auth::id();
+
+            // Verify the appointment belongs to this doctor
+            $appointment = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->where('da.id', $id)
+                ->where('d.doctor_id', $doctorId)
+                ->first();
+
+            if (!$appointment) {
+                return response()->json(['success' => false, 'message' => 'Appointment not found or unauthorized.']);
+            }
+
+            // Update appointment status
+            DB::table('tbl_doctor_appointment')
+                ->where('id', $id)
+                ->update([
+                    'status' => $request->status,
+                    'updated_at' => now()
+                ]);
+
+            // If cancelled, return tokens to availability
+            if ($request->status == 'cancelled') {
+                DB::table('tbl_availability')
+                    ->where('id', $appointment->availability_id)
+                    ->increment('number_of_tokens', 1);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true, 
+                'message' => 'Appointment status updated successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating appointment status: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to update appointment status.']);
+        }
+    }
+
+    public function getAppointmentDetails($id)
+    {
+        try {
+            $doctorId = Auth::id();
+
+            $appointment = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+                ->join('users as u', 'da.user_id', '=', 'u.id')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->where('da.id', $id)
+                ->where('d.doctor_id', $doctorId)
+                ->select(
+                    'da.*',
+                    'u.name as patient_name',
+                    'u.email as patient_email',
+                    'av.date as availability_date',
+                    'av.start_time_slot',
+                    'av.end_time_slot',
+                    'd.doctor_name',
+                    'd.specialization',
+                    'd.clinic_name'
+                )
+                ->first();
+
+            if (!$appointment) {
+                return response()->json(['success' => false, 'message' => 'Appointment not found.']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'appointment' => $appointment
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching appointment details: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to load appointment details.']);
         }
     }
 

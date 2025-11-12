@@ -296,7 +296,7 @@ class PatientController extends Controller
 //     }
 // }
 
-public function createAppointment(Request $request, $id)
+    public function createAppointment(Request $request, $id)
     {
         try {
             $doctors = DB::table('tbl_doctor as d')
@@ -845,6 +845,222 @@ public function createAppointment(Request $request, $id)
         
         return $map[$documentType] ?? null;
     }
+
+    // public function storeAppointment(Request $request)
+    // {
+    //     DB::beginTransaction();
+    //     try {
+    //         $request->validate([
+    //             'availability_id' => 'required|integer',
+    //         ]);
+
+    //         $availability = DB::table('tbl_availability')->where('id', $request->availability_id)->first();
+    //         if (!$availability) {
+    //             return response()->json(['success' => false, 'message' => 'Invalid slot selected.']);
+    //         }
+
+    //         // check if tokens are available
+    //         if ($availability->number_of_tokens <= 0) {
+    //             return response()->json(['success' => false, 'message' => 'No tokens available.']);
+    //         }
+
+    //         // check if user already booked
+    //         $alreadyBooked = DB::table('tbl_doctor_appointment')
+    //             ->where('user_id', Auth::id())
+    //             ->where('availability_id', $availability->id)
+    //             ->exists();
+
+    //         if ($alreadyBooked) {
+    //             return response()->json(['success' => false, 'message' => 'You have already booked this slot.']);
+    //         }
+
+    //         // FIX: Get doctor using the user ID from availability table
+    //         // In your availability table, doctor_id is actually the user ID
+    //         $doctor = DB::table('tbl_doctor')->where('doctor_id', $availability->doctor_id)->first();
+            
+    //         if (!$doctor) {
+    //             \Log::error('Doctor not found for availability', [
+    //                 'availability_id' => $availability->id,
+    //                 'doctor_id_in_availability' => $availability->doctor_id,
+    //                 'all_doctors' => DB::table('tbl_doctor')->select('id', 'doctor_id', 'doctor_name')->get()
+    //             ]);
+    //             return response()->json(['success' => false, 'message' => 'Doctor not found for this availability slot.']);
+    //         }
+
+    //         $fee = $doctor->appointment_fee ?? 0;
+
+    //         // insert appointment
+    //         DB::table('tbl_doctor_appointment')->insert([
+    //             'doctor_id'        => $doctor->id, // Use doctor's auto-increment ID
+    //             'user_id'          => Auth::id(),
+    //             'availability_id'  => $availability->id,
+    //             'appointment_date' => $availability->date,
+    //             'start_time'       => $availability->start_time_slot,
+    //             'end_time'         => $availability->end_time_slot,
+    //             'fee'              => $fee,
+    //             'status'           => 'pending',
+    //             'created_at'       => now(),
+    //             'updated_at'       => now(),
+    //         ]);
+
+    //         // reduce available tokens
+    //         DB::table('tbl_availability')
+    //             ->where('id', $availability->id)
+    //             ->decrement('number_of_tokens', 1);
+
+    //         DB::commit();
+
+    //         return response()->json(['success' => true, 'message' => 'Appointment booked successfully with Dr. ' . $doctor->doctor_name . '!']);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Error booking appointment: ' . $e->getMessage());
+    //         return response()->json(['success' => false, 'message' => 'Failed to book appointment. Please try again.']);
+    //     }
+    // }
+
+public function storeAppointment(Request $request)
+{
+    DB::beginTransaction();
+    try {
+        $request->validate([
+            'availability_id' => 'required|integer',
+        ]);
+
+        $availability = DB::table('tbl_availability')->where('id', $request->availability_id)->first();
+        if (!$availability) {
+            return response()->json(['success' => false, 'message' => 'Invalid slot selected.']);
+        }
+
+        // check if tokens are available
+        if ($availability->number_of_tokens <= 0) {
+            return response()->json(['success' => false, 'message' => 'No tokens available.']);
+        }
+
+        // check if user already booked
+        $alreadyBooked = DB::table('tbl_doctor_appointment')
+            ->where('user_id', Auth::id())
+            ->where('availability_id', $availability->id)
+            ->exists();
+
+        if ($alreadyBooked) {
+            return response()->json(['success' => false, 'message' => 'You have already booked this slot.']);
+        }
+
+        // Get doctor using the user ID from availability table
+        $doctor = DB::table('tbl_doctor')->where('doctor_id', $availability->doctor_id)->first();
+        
+        if (!$doctor) {
+            return response()->json(['success' => false, 'message' => 'Doctor not found for this availability slot.']);
+        }
+
+        $fee = $doctor->appointment_fee ?? 0;
+
+        // Calculate token number: Count existing appointments for this availability + 1
+        $existingAppointmentsCount = DB::table('tbl_doctor_appointment')
+            ->where('availability_id', $availability->id)
+            ->count();
+
+        $patientTokenNumber = $existingAppointmentsCount + 1;
+
+        // insert appointment with token number
+        $appointmentId = DB::table('tbl_doctor_appointment')->insertGetId([
+            'doctor_id'        => $doctor->id,
+            'user_id'          => Auth::id(),
+            'availability_id'  => $availability->id,
+            'appointment_date' => $availability->date,
+            'start_time'       => $availability->start_time_slot,
+            'end_time'         => $availability->end_time_slot,
+            'fee'              => $fee,
+            'token_number'     => $patientTokenNumber,
+            'status'           => 'pending',
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
+
+        // reduce available tokens
+        DB::table('tbl_availability')
+            ->where('id', $availability->id)
+            ->decrement('number_of_tokens', 1);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Appointment booked successfully!',
+            'token_number' => $patientTokenNumber,
+            'doctor_name' => $doctor->doctor_name
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error booking appointment: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'Failed to book appointment. Please try again.']);
+    }
+}
+    // public function myAppointments()
+    // {
+    //     try {
+    //         $appointments = DB::table('tbl_doctor_appointment as da')
+    //             ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+    //             ->join('users as u', 'd.doctor_id', '=', 'u.id')
+    //             ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+    //             ->where('da.user_id', Auth::id())
+    //             ->select(
+    //                 'da.id',
+    //                 'da.appointment_date',
+    //                 'da.start_time',
+    //                 'da.end_time',
+    //                 'da.fee',
+    //                 'da.status',
+    //                 'da.created_at',
+    //                 'u.name as doctor_name',
+    //                 'd.specialization',
+    //                 'd.clinic_name',
+    //                 'av.number_of_tokens'
+    //             )
+    //             ->orderBy('da.appointment_date', 'desc')
+    //             ->orderBy('da.start_time', 'desc')
+    //             ->get();
+
+    //         return view('front.my-appointment', compact('appointments'));
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Error fetching appointments: ' . $e->getMessage());
+    //         return redirect()->back()->with('error', 'Failed to load appointments.');
+    //     }
+    // }
+    public function myAppointments()
+{
+    try {
+        $appointments = DB::table('tbl_doctor_appointment as da')
+            ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+            ->join('users as u', 'd.doctor_id', '=', 'u.id')
+            ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+            ->where('da.user_id', Auth::id())
+            ->select(
+                'da.id',
+                'da.appointment_date',
+                'da.start_time',
+                'da.end_time',
+                'da.fee',
+                'da.status',
+                'da.token_number', // Add token number
+                'da.created_at',
+                'u.name as doctor_name',
+                'd.specialization',
+                'd.clinic_name',
+                'av.number_of_tokens as remaining_tokens'
+            )
+            ->orderBy('da.appointment_date', 'desc')
+            ->orderBy('da.start_time', 'desc')
+            ->get();
+
+        return view('front.my-appointment', compact('appointments'));
+
+    } catch (\Exception $e) {
+        Log::error('Error fetching appointments: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Failed to load appointments.');
+    }
+}
   
 
 }

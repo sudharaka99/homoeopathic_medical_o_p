@@ -9,6 +9,7 @@
                     <div class="col-lg-3">
                         @include('front.account.slidebar')
                     </div>
+
                     <div class="col-lg-9">
                         <!-- Breadcrumb -->
                         <nav aria-label="breadcrumb" class="rounded-3 p-3 mb-4 bg-light">
@@ -22,83 +23,100 @@
                             </div>
                         </nav>
 
-                        <!-- Session Booking Table -->
+                        <!-- Availability Table -->
                         <div class="row">
                             <div class="col-lg-12">
                                 @include('front.message')
 
-                                <div class="card">
+                                <div class="card shadow-sm border-0">
                                     <div class="card-header bg-white">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <h5 class="card-title mb-0">
-                                                <i class="fa fa-calendar-alt me-2 text-primary"></i>
-                                                @foreach ($doctors as $doctor)
-                                                Available Time Slots for Dr. {{ $doctor->doctor_name ?? 'Doctor' }}
-                                                @endforeach
+                                            <h5 class="card-title mb-0 text-primary">
+                                                <i class="fa fa-calendar-alt me-2"></i>
+                                                @if(isset($doctors) && $doctors->isNotEmpty())
+                                                    Available Time Slots for Dr. {{ $doctors->first()->doctor_name ?? 'Doctor' }}
+                                                @else
+                                                    Available Time Slots
+                                                @endif
                                             </h5>
-                                            <a href="" class="btn btn-primary btn-sm">
+                                            <a href="{{ route('patient.appointments') }}" class="btn btn-primary btn-sm">
                                                 <i class="fa fa-calendar-check me-1"></i> My Appointments
                                             </a>
                                         </div>
                                     </div>
+
                                     <div class="card-body">
                                         @if(isset($avalabilityList) && $avalabilityList->isNotEmpty())
                                             <div class="table-responsive">
-                                                <table class="table table-bordered table-hover">
+                                                <table class="table table-bordered table-hover align-middle">
                                                     <thead class="table-light">
-                                                        <tr>
+                                                        <tr class="text-center">
                                                             <th>Date</th>
                                                             <th>Start Time</th>
                                                             <th>End Time</th>
                                                             <th>Duration</th>
-                                                            <th>Available Tokens</th>
-                                                            <th>Fee</th>
+                                                            <th>Tokens</th>
+                                                            <th>Fee (Rs)</th>
                                                             <th>Status</th>
-                                                            <th class="text-center">Action</th>
+                                                            <th>Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         @foreach ($avalabilityList as $availability)
                                                             @php
-                                                                $doctor = $doctors->first();
+                                                                // Get the specific doctor for this page
+                                                                $doctor = $doctors->first() ?? null;
+                                                                $start = \Carbon\Carbon::parse($availability->start_time_slot);
+                                                                $end = \Carbon\Carbon::parse($availability->end_time_slot);
+                                                                $duration = $start->diffInMinutes($end);
+                                                                
+                                                                // Use the specific doctor's fee
+                                                                $fee = $doctor ? ($doctor->appointment_fee ?? 0) : 0;
+                                                                
+                                                                // Calculate estimated token number for display in confirmation
+                                                                $totalSlots = $availability->number_of_tokens + 1; // Estimate total slots
+                                                                $estimatedTokenNumber = $totalSlots - $availability->number_of_tokens;
                                                             @endphp
-                                                            <tr>
+                                                            <tr class="text-center">
                                                                 <td class="fw-bold">
                                                                     {{ \Carbon\Carbon::parse($availability->date)->format('M d, Y') }}
                                                                     @if(\Carbon\Carbon::parse($availability->date)->isToday())
                                                                         <span class="badge bg-info ms-1">Today</span>
                                                                     @endif
                                                                 </td>
-                                                                <td>{{ \Carbon\Carbon::parse($availability->start_time_slot)->format('h:i A') }}</td>
-                                                                <td>{{ \Carbon\Carbon::parse($availability->end_time_slot)->format('h:i A') }}</td>
+                                                                <td>{{ $start->format('h:i A') }}</td>
+                                                                <td>{{ $end->format('h:i A') }}</td>
+                                                                <td>{{ $duration }} min</td>
                                                                 <td>
-                                                                    @php
-                                                                        $start = \Carbon\Carbon::parse($availability->start_time_slot);
-                                                                        $end = \Carbon\Carbon::parse($availability->end_time_slot);
-                                                                        $duration = $start->diffInMinutes($end);
-                                                                    @endphp
-                                                                    {{ $duration }} min
+                                                                    <span class="badge {{ $availability->number_of_tokens > 0 ? 'bg-success' : 'bg-danger' }}">
+                                                                        {{ $availability->number_of_tokens }}
+                                                                    </span>
                                                                 </td>
-                                                                <td>
-                                                                    <span class="badge bg-secondary">{{ $availability->number_of_tokens }}</span>
-                                                                </td>
-                                                                <td>
-                                                                    <strong>RS {{ $doctor->appointment_fee ?? '0' }}</strong>
-                                                                </td>
+                                                                <td><strong>Rs. {{ number_format($fee, 2) }}</strong></td>
                                                                 <td>
                                                                     @if($availability->status == 'available')
                                                                         <span class="badge bg-success">Available</span>
+                                                                    @elseif($availability->status == 'booked')
+                                                                        <span class="badge bg-warning text-dark">Booked</span>
+                                                                    @elseif($availability->status == 'completed')
+                                                                        <span class="badge bg-info">Completed</span>
                                                                     @else
-                                                                        <span class="badge bg-warning">Booked</span>
+                                                                        <span class="badge bg-secondary">{{ ucfirst($availability->status) }}</span>
                                                                     @endif
                                                                 </td>
-                                                                <td class="text-center">
+                                                                <td>
                                                                     @if($availability->status == 'available' && $availability->number_of_tokens > 0)
-                                                                        <button type="button" class="btn btn-primary btn-sm book-btn" 
+                                                                        <button type="button" 
+                                                                                class="btn btn-sm btn-primary book-btn" 
                                                                                 data-availability-id="{{ $availability->id }}"
+                                                                                data-fee="{{ $fee }}"
+                                                                                data-doctor-name="{{ $doctor->doctor_name ?? 'Doctor' }}"
+                                                                                data-estimated-token="{{ $estimatedTokenNumber }}"
                                                                                 title="Book Appointment">
-                                                                            <i class="fa fa-calendar-plus me-1"></i>Book
+                                                                            <i class="fa fa-calendar-plus me-1"></i> Book
                                                                         </button>
+                                                                    @elseif($availability->status == 'booked')
+                                                                        <span class="badge bg-warning text-dark">Fully Booked</span>
                                                                     @else
                                                                         <span class="badge bg-secondary">Not Available</span>
                                                                     @endif
@@ -112,7 +130,7 @@
                                             <div class="text-center py-5">
                                                 <i class="fa fa-calendar-times fa-3x text-muted mb-3"></i>
                                                 <h5 class="text-muted">No Available Time Slots</h5>
-                                                <p class="text-muted">This doctor doesn't have any available slots at the moment.</p>
+                                                <p class="text-muted">This doctor doesn't have any available slots right now.</p>
                                                 <a href="{{ route('patient.findDoctors') }}" class="btn btn-primary">
                                                     <i class="fa fa-arrow-left me-1"></i> Choose Another Doctor
                                                 </a>
@@ -129,269 +147,116 @@
     </div>
 </section>
 
-<!-- Book Token Modal -->
-<div class="modal fade" id="bookTokenModal" tabindex="-1" aria-labelledby="bookTokenModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bookTokenModalLabel">
-                    <i class="fa fa-calendar-check me-2 text-primary"></i>Book Appointment
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('patient.book.appointment') }}" method="POST" id="bookTokenForm">
-                @csrf
-                <input type="hidden" name="availability_id" id="availability_id">
-                <input type="hidden" name="doctor_id" id="doctor_id">
-                <input type="hidden" name="appointment_fee" id="appointment_fee">
-                <input type="hidden" name="stripe_payment_intent_id" id="stripe_payment_intent_id">
-                
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <h6 class="alert-heading mb-2">Appointment Details</h6>
-                        <p class="mb-1"><strong>Doctor:</strong> <span id="doctorName">Loading...</span></p>
-                        <p class="mb-1"><strong>Date:</strong> <span id="slotDate">Loading...</span></p>
-                        <p class="mb-1"><strong>Time:</strong> <span id="slotTime">Loading...</span></p>
-                        <p class="mb-0"><strong>Fee:</strong> RS <span id="feeAmount">Loading...</span></p>
-                    </div>
-                    
-                    <!-- Payment Method Selection -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Payment Method</label>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="payment_method" id="stripePayment" value="stripe" checked>
-                            <label class="form-check-label" for="stripePayment">
-                                <i class="fab fa-cc-stripe me-1"></i> Credit/Debit Card (Stripe)
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="payment_method" id="paypalPayment" value="paypal">
-                            <label class="form-check-label" for="paypalPayment">
-                                <i class="fab fa-paypal me-1"></i> PayPal
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Stripe Payment Element -->
-                    <div id="stripePaymentSection">
-                        <div class="mb-3">
-                            <label class="form-label">Payment Details</label>
-                            <div id="payment-element" class="p-3 border rounded">
-                                <!-- Stripe Payment Element will be inserted here -->
-                            </div>
-                            <div id="payment-errors" class="text-danger mt-2 small"></div>
-                        </div>
-                    </div>
-
-                    <!-- PayPal Section -->
-                    <div id="paypalPaymentSection" style="display: none;">
-                        <div class="alert alert-warning">
-                            <small>
-                                <i class="fa fa-info-circle me-1"></i>
-                                You will be redirected to PayPal to complete your payment.
-                            </small>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="patient_notes" class="form-label">Notes for Doctor (Optional)</label>
-                        <textarea name="patient_notes" id="patient_notes" class="form-control" rows="3" 
-                                  placeholder="Describe your symptoms, concerns, or any specific requirements..."></textarea>
-                        <div class="form-text">This information will help the doctor prepare for your appointment.</div>
-                    </div>
-
-                    <div class="alert alert-warning">
-                        <small>
-                            <i class="fa fa-info-circle me-1"></i>
-                            Please arrive 10 minutes before your scheduled time. Late arrivals may result in rescheduling.
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="submitBookingBtn">
-                        <i class="fa fa-credit-card me-1"></i>Pay & Confirm Booking
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endsection
-
-@section('customJS')
-<script src="https://js.stripe.com/v3/"></script>
+<!-- SweetAlert2 + Booking Script -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// Initialize Stripe
-const stripe = Stripe('{{ config('services.stripe.key') }}');
-let elements;
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.book-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            let availabilityId = this.dataset.availabilityId;
+            let fee = this.dataset.fee;
+            let doctorName = this.dataset.doctorName;
+            let estimatedToken = this.dataset.estimatedToken;
 
-$(document).ready(function() {
-    console.log('Document ready - book appointment page loaded');
+            // Confirmation Dialog WITH Token Number
+            Swal.fire({
+                title: 'Confirm Booking',
+                html: `<div class="text-start">
+                         <p>Book appointment with <strong>Dr. ${doctorName}</strong>?</p>
+                         <p><strong>Consultation Fee:</strong> Rs. ${parseFloat(fee).toLocaleString()}</p>
+                         <div class="my-3 p-2 bg-light rounded">
+                             <p class="mb-1 text-muted small">Your Token Number Will Be</p>
+                             <h4 class="text-primary mb-0">#${estimatedToken}</h4>
+                         </div>
+                         <p class="text-muted small">Click "Confirm Booking" to proceed with this token number.</p>
+                       </div>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Confirm Booking',
+                cancelButtonText: 'Cancel',
+                width: '500px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Processing Booking...',
+                        html: `Booking appointment with <strong>Dr. ${doctorName}</strong><br>
+                               <small>Token Number: #${estimatedToken}</small>`,
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
 
-    // Payment method toggle
-    $('input[name="payment_method"]').on('change', function() {
-        if ($(this).val() === 'stripe') {
-            $('#stripePaymentSection').show();
-            $('#paypalPaymentSection').hide();
-        } else {
-            $('#stripePaymentSection').hide();
-            $('#paypalPaymentSection').show();
-        }
-    });
-
-    // Book button click handler
-    $(document).on('click', '.book-btn', async function() {
-        console.log('Book button clicked');
-        
-        const availabilityId = $(this).data('availability-id');
-        console.log('Availability ID:', availabilityId);
-        
-        if (!availabilityId) {
-            alert('Error: No availability ID found');
-            return;
-        }
-
-        // Show loading state in modal
-        $('#doctorName').text('Loading...');
-        $('#slotDate').text('Loading...');
-        $('#slotTime').text('Loading...');
-        $('#feeAmount').text('Loading...');
-        
-        const submitBtn = $('#submitBookingBtn');
-        submitBtn.prop('disabled', true);
-        submitBtn.html('<i class="fa fa-spinner fa-spin me-1"></i>Loading...');
-
-        // Show modal immediately
-        $('#bookTokenModal').modal('show');
-
-        try {
-            // Fetch availability details
-            const availabilityResponse = await $.ajax({
-                url: '/patient/get-availability-details/' + availabilityId,
-                type: 'GET'
-            });
-
-            console.log('Availability response:', availabilityResponse);
-
-            if (availabilityResponse.success) {
-                const availability = availabilityResponse.availability;
-                const doctor = availabilityResponse.doctor;
-
-                // Set form values
-                $('#availability_id').val(availability.id);
-                $('#doctor_id').val(availability.doctor_id);
-                $('#appointment_fee').val(doctor.appointment_fee);
-                
-                // Display values in modal
-                $('#doctorName').text('Dr. ' + doctor.doctor_name);
-                $('#slotDate').text(availability.formatted_date);
-                $('#slotTime').text(availability.formatted_time);
-                $('#feeAmount').text(doctor.appointment_fee);
-
-                // Initialize Stripe Payment Element
-                await initializeStripePayment(availability.id, doctor.appointment_fee);
-
-                // Enable submit button
-                submitBtn.prop('disabled', false);
-                submitBtn.html('<i class="fa fa-credit-card me-1"></i>Pay & Confirm Booking');
-                
-            } else {
-                throw new Error(availabilityResponse.message || 'Failed to load availability details');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Error: ' + error.message);
-            $('#bookTokenModal').modal('hide');
-        }
-    });
-
-    // Initialize Stripe Payment Element
-    async function initializeStripePayment(availabilityId, amount) {
-        try {
-            // Create payment intent
-            const response = await $.ajax({
-                url: '{{ route("patient.create.payment.intent") }}',
-                type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    availability_id: availabilityId,
-                    amount: amount
+                    // Make API request
+                    fetch("{{ route('front.bookAppointment') }}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            availability_id: availabilityId 
+                        })
+                    })
+                    .then(async (response) => {
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Success Dialog - Show actual token number
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Booking Confirmed!',
+                                html: `<div class="text-center">
+                                         <div class="mb-3">
+                                             <i class="fa fa-check-circle text-success fa-3x"></i>
+                                         </div>
+                                         <p class="fw-bold fs-5">Appointment Booked Successfully!</p>
+                                         <p class="mb-3">With <strong>Dr. ${data.doctor_name}</strong></p>
+                                         
+                                         <div class="my-4 p-3 bg-success text-white rounded-3">
+                                             <p class="mb-2 small">Your Confirmed Token Number</p>
+                                             <h1 class="display-6 fw-bold mb-0">#${data.token_number}</h1>
+                                         </div>
+                                         
+                                         <p class="text-muted mb-0">
+                                             <i class="fa fa-info-circle me-1"></i>
+                                             Please remember your token number for your visit
+                                         </p>
+                                       </div>`,
+                                showConfirmButton: true,
+                                confirmButtonText: 'OK, Got It!',
+                                confirmButtonColor: '#3085d6'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Booking Failed',
+                                text: data.message || 'Something went wrong! Please try again.',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#d33'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Booking Error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Network Error',
+                            text: 'Please check your internet connection and try again.',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#d33'
+                        });
+                    });
                 }
             });
-
-            console.log('Payment intent response:', response);
-
-            if (response.success) {
-                // Store payment intent ID
-                $('#stripe_payment_intent_id').val(response.paymentIntentId);
-
-                // Initialize Stripe Elements
-                elements = stripe.elements({
-                    clientSecret: response.clientSecret,
-                    appearance: {
-                        theme: 'stripe',
-                    },
-                });
-
-                // Create and mount the Payment Element
-                const paymentElement = elements.create('payment');
-                paymentElement.mount('#payment-element');
-
-                console.log('Stripe Payment Element mounted successfully');
-            } else {
-                throw new Error(response.message || 'Failed to initialize payment');
-            }
-        } catch (error) {
-            console.error('Stripe initialization error:', error);
-            throw new Error('Payment initialization failed: ' + error.message);
-        }
-    }
-
-    // Form submission handler
-    $('#bookTokenForm').on('submit', async function(e) {
-        e.preventDefault();
-        
-        const submitBtn = $('#submitBookingBtn');
-        const originalText = submitBtn.html();
-        submitBtn.prop('disabled', true);
-        submitBtn.html('<i class="fa fa-spinner fa-spin me-1"></i>Processing Payment...');
-
-        const paymentMethod = $('input[name="payment_method"]:checked').val();
-
-        try {
-            if (paymentMethod === 'stripe') {
-                // Confirm Stripe payment
-                const { error } = await stripe.confirmPayment({
-                    elements,
-                    confirmParams: {
-                        return_url: '{{ url("/booking-success") }}',
-                    },
-                    redirect: 'if_required'
-                });
-
-                if (error) {
-                    throw new Error(error.message);
-                }
-
-                console.log('Stripe payment confirmed successfully');
-            }
-
-            // Submit the form
-            console.log('Submitting booking form...');
-            this.submit();
-
-        } catch (error) {
-            console.error('Payment error:', error);
-            $('#payment-errors').text(error.message);
-            submitBtn.prop('disabled', false);
-            submitBtn.html(originalText);
-        }
+        });
     });
-
-    // Debug info
-    console.log('Book buttons found:', $('.book-btn').length);
-    console.log('Stripe key:', '{{ config('services.stripe.key') ? "Set" : "Not set" }}');
 });
 </script>
 @endsection

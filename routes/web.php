@@ -71,8 +71,11 @@ Route::get('/doctor/get-availability/{id}', [DoctorController::class, 'getAvaila
 Route::put('/doctor/availability/update/{id}', [DoctorController::class, 'updateAvailability'])->name('doctor.availability.update');
 Route::delete('/doctor/availability/delete/{id}', [DoctorController::class, 'deleteAvailability'])->name('doctor.availability.delete');
 
+//
 
-
+Route::get('/appointments', [DoctorController::class, 'manageAppointments'])->name('doctor.appointments');
+Route::post('/appointments/{id}/update-status', [DoctorController::class, 'updateStatus'])->name('doctor.appointments.updateStatus');
+Route::get('/appointments/{id}/details', [DoctorController::class, 'getAppointmentDetails'])->name('doctor.appointments.details');
 
 // Route::post('/doctor/{id}/feedback', [DoctorController::class, 'storeFeedback'])->name('doctor.feedback');
 
@@ -111,6 +114,11 @@ Route::post('/medical-information', [PatientController::class, 'store'])->name('
 Route::get('/medical-documents/{documentType}/{filename}', [PatientController::class, 'viewDocument'])->name('account.medicalInfo.viewDocument');   
 Route::get('/medical-documents/{documentType}/{filename}/download', [PatientController::class, 'downloadDocument'])->name('account.medicalInfo.downloadDocument');   
 Route::delete('/medical-documents/delete', [PatientController::class, 'deleteDocument'])->name('account.medicalInfo.deleteDocument');
+
+
+Route::post('/book-appointment', [PatientController::class, 'storeAppointment'])->name('front.bookAppointment');
+Route::get('/my-appointments', [PatientController::class, 'myAppointments'])->name('patient.appointments');
+
 });
 
 
