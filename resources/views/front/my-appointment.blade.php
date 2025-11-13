@@ -55,7 +55,8 @@
                                                             <th>Token No</th>
                                                             <th>Duration</th>
                                                             <th>Fee (Rs)</th>
-                                                            <th>Status</th>
+                                                            <th>Payment Status</th>
+                                                            <th>Appointment Status</th>
                                                             <th>Booked On</th>
                                                             <th>Action</th>
                                                         </tr>
@@ -69,16 +70,17 @@
                                                                 $appointmentDate = \Carbon\Carbon::parse($appointment->appointment_date);
                                                                 $isToday = $appointmentDate->isToday();
                                                                 $isPast = $appointmentDate->isPast();
+                                                                $isUpcoming = !$isPast && !$isToday;
+                                                                $canJoinMeeting = $appointment->status == 'confirmed' && 
+                                                                                 ($isToday || $isPast) && 
+                                                                                 $appointment->payment_status == 'paid';
                                                             @endphp
                                                             <tr class="text-center">
                                                                 <td class="text-start">
                                                                     <strong>Dr. {{ $appointment->doctor_name }}</strong>
-                                                                    {{-- @if($appointment->specialization)
+                                                                    @if($appointment->specialization)
                                                                         <br><small class="text-muted">{{ $appointment->specialization }}</small>
                                                                     @endif
-                                                                    @if($appointment->clinic_name)
-                                                                        <br><small class="text-muted"><i class="fa fa-hospital me-1"></i>{{ $appointment->clinic_name }}</small>
-                                                                    @endif --}}
                                                                 </td>
                                                                 <td>
                                                                     <div class="fw-bold">
@@ -107,6 +109,20 @@
                                                                 <td>{{ $duration }} min</td>
                                                                 <td><strong>Rs. {{ number_format($appointment->fee, 2) }}</strong></td>
                                                                 <td>
+                                                                    @if($appointment->payment_status == 'paid')
+                                                                        <span class="badge bg-success">Paid</span>
+                                                                        @if($appointment->payment_method)
+                                                                            <br><small class="text-muted">via {{ ucfirst($appointment->payment_method) }}</small>
+                                                                        @endif
+                                                                    @elseif($appointment->payment_status == 'pending')
+                                                                        <span class="badge bg-warning text-dark">Pending</span>
+                                                                    @elseif($appointment->payment_status == 'failed')
+                                                                        <span class="badge bg-danger">Failed</span>
+                                                                    @else
+                                                                        <span class="badge bg-secondary">{{ ucfirst($appointment->payment_status) }}</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td>
                                                                     @if($appointment->status == 'pending')
                                                                         <span class="badge bg-warning text-dark">Pending</span>
                                                                     @elseif($appointment->status == 'confirmed')
@@ -129,12 +145,34 @@
                                                                                 title="View Details">
                                                                             <i class="fa fa-eye"></i>
                                                                         </button>
-                                                                        @if($appointment->status == 'pending' && !$isPast)
-                                                                        <button type="button" class="btn btn-sm btn-outline-danger cancel-btn"
-                                                                                data-appointment-id="{{ $appointment->id }}"
-                                                                                title="Cancel Appointment">
-                                                                            <i class="fa fa-times"></i>
-                                                                        </button>
+                                                                        
+                                                                        {{-- Pay Button for Pending Payment --}}
+                                                                        @if(in_array($appointment->status, ['confirmed', 'pending']) && $appointment->payment_status == 'pending')
+                                                                            <button type="button" class="btn btn-sm btn-outline-success pay-btn"
+                                                                                    data-appointment-id="{{ $appointment->id }}"
+                                                                                    data-fee="{{ $appointment->fee }}"
+                                                                                    data-doctor-name="{{ $appointment->doctor_name }}"
+                                                                                    title="Pay Now">
+                                                                                <i class="fa fa-credit-card"></i>
+                                                                            </button>
+                                                                        @endif
+
+                                                                        {{-- Join Meeting Button --}}
+                                                                        @if($canJoinMeeting)
+                                                                            <button type="button" class="btn btn-sm btn-outline-info join-meeting-btn"
+                                                                                    data-appointment-id="{{ $appointment->id }}"
+                                                                                    title="Join Meeting">
+                                                                                <i class="fa fa-video"></i>
+                                                                            </button>
+                                                                        @endif
+
+                                                                        {{-- Cancel Button --}}
+                                                                        @if(in_array($appointment->status, ['pending', 'confirmed']) && !$isPast)
+                                                                            <button type="button" class="btn btn-sm btn-outline-danger cancel-btn"
+                                                                                    data-appointment-id="{{ $appointment->id }}"
+                                                                                    title="Cancel Appointment">
+                                                                                <i class="fa fa-times"></i>
+                                                                            </button>
                                                                         @endif
                                                                     </div>
                                                                 </td>
@@ -164,11 +202,95 @@
     </div>
 </section>
 
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">
+                    <i class="fa fa-credit-card me-2 text-success"></i>Complete Payment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('patient.process.payment') }}" method="POST" id="paymentForm">
+                @csrf
+                <input type="hidden" name="appointment_id" id="payment_appointment_id">
+                <input type="hidden" name="stripe_payment_intent_id" id="payment_stripe_payment_intent_id">
+                
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading mb-2">Payment Details</h6>
+                        <p class="mb-1"><strong>Appointment ID:</strong> <span id="paymentAppointmentId">-</span></p>
+                        <p class="mb-1"><strong>Amount:</strong> Rs. <span id="paymentAmount">-</span></p>
+                        <p class="mb-0"><strong>Doctor:</strong> <span id="paymentDoctorName">-</span></p>
+                    </div>
+                    
+                    <!-- Payment Method Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Payment Method</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="payment_method" id="stripePayment" value="stripe" checked>
+                            <label class="form-check-label" for="stripePayment">
+                                <i class="fab fa-cc-stripe me-1"></i> Credit/Debit Card (Stripe)
+                            </label>
+                        </div>
+                        {{-- <div class="form-check">
+                            <input class="form-check-input" type="radio" name="payment_method" id="paypalPayment" value="paypal">
+                            <label class="form-check-label" for="paypalPayment">
+                                <i class="fab fa-paypal me-1"></i> PayPal
+                            </label>
+                        </div> --}}
+                    </div>
+
+                    <!-- Stripe Payment Element -->
+                    <div id="stripePaymentSection">
+                        <div class="mb-3">
+                            <label class="form-label">Payment Details</label>
+                            <div id="payment-element" class="p-3 border rounded">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading payment form...</span>
+                                    </div>
+                                    <p class="mt-2 mb-0 text-muted">Loading payment form...</p>
+                                </div>
+                            </div>
+                            <div id="payment-errors" class="text-danger mt-2 small"></div>
+                        </div>
+                    </div>
+
+                    <!-- PayPal Section -->
+                    <div id="paypalPaymentSection" style="display: none;">
+                        <div class="alert alert-warning">
+                            <small>
+                                <i class="fa fa-info-circle me-1"></i>
+                                You will be redirected to PayPal to complete your payment.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="submitPaymentBtn" disabled>
+                        <i class="fa fa-credit-card me-1"></i>Complete Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- SweetAlert2 + Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+// Initialize Stripe
+const stripe = Stripe('{{ config('services.stripe.key') }}');
+let elements;
+let isStripeInitialized = false;
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Success message with token number
+    // Success message
     @if(session('success'))
         Swal.fire({
             icon: 'success',
@@ -179,17 +301,79 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     @endif
 
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: '{{ session('error') }}',
+            timer: 5000,
+            showConfirmButton: true
+        });
+    @endif
+
     // View Appointment Details
     document.querySelectorAll('.view-btn').forEach(button => {
         button.addEventListener('click', function() {
             let appointmentId = this.dataset.appointmentId;
-            
-            // Here you can implement view details functionality
             Swal.fire({
                 title: 'Appointment Details',
-                text: 'View details functionality will be implemented here.',
+                text: 'Detailed view will be implemented here.',
                 icon: 'info',
                 confirmButtonText: 'OK'
+            });
+        });
+    });
+
+    // Pay Button Handler - OPTIMIZED
+    document.querySelectorAll('.pay-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            let appointmentId = this.dataset.appointmentId;
+            let fee = this.dataset.fee;
+            let doctorName = this.dataset.doctorName;
+            
+            // Set basic info immediately
+            $('#payment_appointment_id').val(appointmentId);
+            $('#paymentAppointmentId').text(appointmentId);
+            $('#paymentAmount').text(fee);
+            $('#paymentDoctorName').text('Dr. ' + doctorName);
+            
+            // Reset form state
+            $('#submitPaymentBtn').prop('disabled', true);
+            $('#payment-errors').text('');
+            $('#payment-element').html(`
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading payment form...</span>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted">Loading payment form...</p>
+                </div>
+            `);
+            
+            // Show modal immediately
+            $('#paymentModal').modal('show');
+            
+            // Initialize payment after modal is shown
+            initializePaymentForAppointment(appointmentId, fee);
+        });
+    });
+
+    // Join Meeting Button Handler
+    document.querySelectorAll('.join-meeting-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            let appointmentId = this.dataset.appointmentId;
+            Swal.fire({
+                title: 'Join Meeting?',
+                text: 'You will be redirected to the video consultation room.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#0dcaf0',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Join Meeting',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `/meeting/${appointmentId}`;
+                }
             });
         });
     });
@@ -210,7 +394,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 cancelButtonText: 'Keep Appointment'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Implement cancel appointment functionality
                     fetch(`/appointments/${appointmentId}/cancel`, {
                         method: 'POST',
                         headers: {
@@ -237,12 +420,134 @@ document.addEventListener('DOMContentLoaded', function() {
                                 text: data.message
                             });
                         }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Failed to cancel appointment'
+                        });
                     });
                 }
             });
         });
     });
+
+    // Payment method toggle
+    $('input[name="payment_method"]').on('change', function() {
+        if ($(this).val() === 'stripe') {
+            $('#stripePaymentSection').show();
+            $('#paypalPaymentSection').hide();
+            $('#submitPaymentBtn').prop('disabled', !isStripeInitialized);
+        } else {
+            $('#stripePaymentSection').hide();
+            $('#paypalPaymentSection').show();
+            $('#submitPaymentBtn').prop('disabled', false);
+        }
+    });
+
+    // Payment form submission
+    $('#paymentForm').on('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = $('#submitPaymentBtn');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fa fa-spinner fa-spin me-1"></i>Processing Payment...');
+
+        const paymentMethod = $('input[name="payment_method"]:checked').val();
+
+        try {
+            if (paymentMethod === 'stripe') {
+                const { error } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: '{{ url("/payment-success") }}',
+                    },
+                    redirect: 'if_required'
+                });
+
+                if (error) {
+                    throw new Error(error.message);
+                }
+            }
+
+            // Submit the form
+            this.submit();
+
+        } catch (error) {
+            console.error('Payment error:', error);
+            $('#payment-errors').text(error.message);
+            submitBtn.prop('disabled', false);
+            submitBtn.html(originalText);
+        }
+    });
+
+    // Reset modal when closed
+    $('#paymentModal').on('hidden.bs.modal', function () {
+        isStripeInitialized = false;
+        $('#submitPaymentBtn').prop('disabled', true);
+        $('#payment-errors').text('');
+        if (elements) {
+            elements.unmount();
+        }
+    });
 });
+
+// Optimized payment initialization
+async function initializePaymentForAppointment(appointmentId, amount) {
+    try {
+        const response = await fetch('/create-payment-intent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                appointment_id: appointmentId,
+                amount: amount
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            $('#payment_stripe_payment_intent_id').val(data.paymentIntentId);
+
+            // Initialize Stripe Elements
+            elements = stripe.elements({
+                clientSecret: data.clientSecret,
+                appearance: {
+                    theme: 'stripe',
+                },
+            });
+
+            // Create and mount the Payment Element
+            const paymentElement = elements.create('payment');
+            
+            // Clear loading state and mount
+            $('#payment-element').html('');
+            paymentElement.mount('#payment-element');
+            
+            // Enable submit button
+            isStripeInitialized = true;
+            $('#submitPaymentBtn').prop('disabled', false);
+            
+        } else {
+            throw new Error(data.message || 'Failed to initialize payment');
+        }
+    } catch (error) {
+        console.error('Payment initialization error:', error);
+        $('#payment-element').html(`
+            <div class="alert alert-danger">
+                <i class="fa fa-exclamation-triangle me-2"></i>
+                Failed to load payment form: ${error.message}
+            </div>
+        `);
+        $('#submitPaymentBtn').prop('disabled', true);
+    }
+}
 </script>
 
 <style>
@@ -264,25 +569,41 @@ document.addEventListener('DOMContentLoaded', function() {
     text-align: center;
 }
 
-/* Alternative style options - choose one */
-
-/* Style 2: Green gradient */
-.token-badge.green {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    border: 2px solid #3aa0ff;
+.btn-group .btn {
+    margin: 0 2px;
 }
 
-/* Style 3: Orange gradient */
-.token-badge.orange {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    border: 2px solid #e6687c;
+/* Loading animation */
+.spinner-border {
+    width: 2rem;
+    height: 2rem;
 }
 
-/* Style 4: Purple gradient */
-.token-badge.purple {
-    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    color: #333;
-    border: 2px solid #9ad4d1;
+/* Modal optimization */
+.modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+#payment-element {
+    min-height: 120px;
+}
+
+@media (max-width: 768px) {
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .btn-group .btn {
+        margin: 0;
+    }
+    
+    .modal-dialog {
+        margin: 20px 10px;
+    }
 }
 </style>
 @endsection

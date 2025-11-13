@@ -94,8 +94,7 @@ Route::get('/patient/find-doctors', [PatientController::class, 'findDoctors'])->
 
 Route::get('/create-appointment/{id}', [PatientController::class, 'createAppointment'])->name('patient.bookAppointment');
 Route::get('/patient/get-availability-details/{id}', [PatientController::class, 'getAvailabilityDetails'])->name('patient.get.availability.details');
-Route::post('/create-payment-intent', [PatientController::class, 'createPaymentIntent'])->name('patient.create.payment.intent');
-Route::post('/book-appointment', [PatientController::class, 'bookAppointment'])->name('patient.book.appointment');
+
 
 Route::get('/patient/dashboard', [PatientController::class, 'dashboard'])->name('patient.dashboard');
 
@@ -117,8 +116,13 @@ Route::delete('/medical-documents/delete', [PatientController::class, 'deleteDoc
 
 
 Route::post('/book-appointment', [PatientController::class, 'storeAppointment'])->name('front.bookAppointment');
+// Patient Appointment Routes
 Route::get('/my-appointments', [PatientController::class, 'myAppointments'])->name('patient.appointments');
-
+Route::get('/appointment-details/{id}', [PatientController::class, 'getAppointmentDetails'])->name('patient.appointment.details');
+Route::post('/create-payment-intent', [PatientController::class, 'createPaymentIntent'])->name('patient.create.payment.intent');
+Route::post('/book-appointment', [PatientController::class, 'bookAppointment'])->name('patient.book.appointment');
+Route::post('/appointments/process-payment', [PatientController::class, 'processPayment'])->name('patient.process.payment');
+Route::post('/appointments/{id}/cancel', [PatientController::class, 'cancelAppointment'])->name('patient.cancel.appointment');
 });
 
 
