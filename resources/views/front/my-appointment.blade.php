@@ -548,6 +548,39 @@ async function initializePaymentForAppointment(appointmentId, amount) {
         $('#submitPaymentBtn').prop('disabled', true);
     }
 }
+
+// Join Meeting Button Handler - UPDATED
+document.querySelectorAll('.join-meeting-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        let appointmentId = this.dataset.appointmentId;
+        
+        Swal.fire({
+            title: 'Join Meeting?',
+            text: 'You will be redirected to the Zoom meeting room.',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#0dcaf0',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Join Meeting',
+            cancelButtonText: 'Cancel',
+            showLoaderOnConfirm: true,
+            preConfirm: async () => {
+                try {
+                    const response = await fetch(`/meeting/${appointmentId}`);
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        throw new Error('Failed to join meeting');
+                    }
+                } catch (error) {
+                    Swal.showValidationMessage(`Request failed: ${error}`);
+                }
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        });
+    });
+});
+
 </script>
 
 <style>

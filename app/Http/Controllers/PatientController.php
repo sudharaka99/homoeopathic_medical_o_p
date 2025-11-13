@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Stripe\Exception\ApiErrorException;
+use App\Providers\Services\ZoomService;
 
 use App\Models\User;
 
@@ -899,481 +900,614 @@ class PatientController extends Controller
     //         return redirect()->back()->with('error', 'Failed to load appointments.');
     //     }
     // }
+////////////////////////////////////////////////////// start payment integration /////////////////////////////////////////////////
+   
+    public function myAppointments()
+    {
+        try {
+            $appointments = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->join('users as u', 'd.doctor_id', '=', 'u.id')
+                ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+                ->leftJoin('tbl_payment as p', 'da.id', '=', 'p.appointment_id') // Left join with payment table
+                ->where('da.user_id', Auth::id())
+                ->select(
+                    'da.id',
+                    'da.appointment_date',
+                    'da.start_time',
+                    'da.end_time',
+                    'da.fee',
+                    'da.status',
+                    'da.token_number',
+                    'da.created_at',
+                    'da.payment_status',
+                    'da.payment_method',
+                    'da.payment_intent_id',
+                    'da.paid_at',
+                    'u.name as doctor_name',
+                    'd.specialization',
+                    'd.clinic_name',
+                    'av.number_of_tokens as remaining_tokens',
+                    'p.card_details', // Get card details from payment table
+                    'p.payment_details' // Get payment details from payment table
+                )
+                ->orderBy('da.appointment_date', 'desc')
+                ->orderBy('da.start_time', 'desc')
+                ->get();
 
-   public function myAppointments()
-{
-    try {
-        $appointments = DB::table('tbl_doctor_appointment as da')
-            ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
-            ->join('users as u', 'd.doctor_id', '=', 'u.id')
-            ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
-            ->leftJoin('tbl_payment as p', 'da.id', '=', 'p.appointment_id') // Left join with payment table
-            ->where('da.user_id', Auth::id())
-            ->select(
-                'da.id',
-                'da.appointment_date',
-                'da.start_time',
-                'da.end_time',
-                'da.fee',
-                'da.status',
-                'da.token_number',
-                'da.created_at',
-                'da.payment_status',
-                'da.payment_method',
-                'da.payment_intent_id',
-                'da.paid_at',
-                'u.name as doctor_name',
-                'd.specialization',
-                'd.clinic_name',
-                'av.number_of_tokens as remaining_tokens',
-                'p.card_details', // Get card details from payment table
-                'p.payment_details' // Get payment details from payment table
-            )
-            ->orderBy('da.appointment_date', 'desc')
-            ->orderBy('da.start_time', 'desc')
-            ->get();
+            // Decode JSON fields
+            $appointments->transform(function ($appointment) {
+                if ($appointment->card_details) {
+                    $appointment->card_details = json_decode($appointment->card_details);
+                }
+                if ($appointment->payment_details) {
+                    $appointment->payment_details = json_decode($appointment->payment_details);
+                }
+                return $appointment;
+            });
 
-        // Decode JSON fields
-        $appointments->transform(function ($appointment) {
+            return view('front.my-appointment', compact('appointments'));
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching appointments: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load appointments.');
+        }
+    }
+
+    public function getAppointmentDetails($id)
+    {
+        try {
+            $appointment = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->join('users as u', 'd.doctor_id', '=', 'u.id')
+                ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+                ->leftJoin('tbl_payment as p', 'da.id', '=', 'p.appointment_id') // Left join with payment table
+                ->where('da.id', $id)
+                ->where('da.user_id', Auth::id())
+                ->select(
+                    'da.id',
+                    'da.appointment_date',
+                    'da.start_time',
+                    'da.end_time',
+                    'da.fee',
+                    'da.status',
+                    'da.token_number',
+                    'da.payment_status',
+                    'da.payment_method',
+                    'da.payment_intent_id',
+                    'da.paid_at',
+                    'u.name as doctor_name',
+                    'd.specialization',
+                    'd.clinic_name',
+                    'p.card_details',
+                    'p.payment_details'
+                )
+                ->first();
+
+            if (!$appointment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Appointment not found'
+                ], 404);
+            }
+
+            // Decode JSON fields
             if ($appointment->card_details) {
                 $appointment->card_details = json_decode($appointment->card_details);
             }
             if ($appointment->payment_details) {
                 $appointment->payment_details = json_decode($appointment->payment_details);
             }
-            return $appointment;
-        });
 
-        return view('front.my-appointment', compact('appointments'));
+            return response()->json([
+                'success' => true,
+                'appointment' => $appointment
+            ]);
 
-    } catch (\Exception $e) {
-        Log::error('Error fetching appointments: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Failed to load appointments.');
-    }
-}
-
-public function getAppointmentDetails($id)
-{
-    try {
-        $appointment = DB::table('tbl_doctor_appointment as da')
-            ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
-            ->join('users as u', 'd.doctor_id', '=', 'u.id')
-            ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
-            ->leftJoin('tbl_payment as p', 'da.id', '=', 'p.appointment_id') // Left join with payment table
-            ->where('da.id', $id)
-            ->where('da.user_id', Auth::id())
-            ->select(
-                'da.id',
-                'da.appointment_date',
-                'da.start_time',
-                'da.end_time',
-                'da.fee',
-                'da.status',
-                'da.token_number',
-                'da.payment_status',
-                'da.payment_method',
-                'da.payment_intent_id',
-                'da.paid_at',
-                'u.name as doctor_name',
-                'd.specialization',
-                'd.clinic_name',
-                'p.card_details',
-                'p.payment_details'
-            )
-            ->first();
-
-        if (!$appointment) {
+        } catch (\Exception $e) {
+            Log::error('Error fetching appointment details: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Appointment not found'
-            ], 404);
+                'message' => 'Failed to load appointment details'
+            ], 500);
         }
-
-        // Decode JSON fields
-        if ($appointment->card_details) {
-            $appointment->card_details = json_decode($appointment->card_details);
-        }
-        if ($appointment->payment_details) {
-            $appointment->payment_details = json_decode($appointment->payment_details);
-        }
-
-        return response()->json([
-            'success' => true,
-            'appointment' => $appointment
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Error fetching appointment details: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load appointment details'
-        ], 500);
     }
-}
 
-public function createPaymentIntent(Request $request)
-{
-    try {
-        $request->validate([
-            'appointment_id' => 'required|integer',
-            'amount' => 'required|numeric',
-        ]);
+    public function createPaymentIntent(Request $request)
+    {
+        try {
+            $request->validate([
+                'appointment_id' => 'required|integer',
+                'amount' => 'required|numeric',
+            ]);
 
-        // Verify appointment belongs to user and is pending payment
-        $appointment = DB::table('tbl_doctor_appointment')
-            ->where('id', $request->appointment_id)
-            ->where('user_id', Auth::id())
-            ->where('payment_status', 'pending')
-            ->first();
+            // Verify appointment belongs to user and is pending payment
+            $appointment = DB::table('tbl_doctor_appointment')
+                ->where('id', $request->appointment_id)
+                ->where('user_id', Auth::id())
+                ->where('payment_status', 'pending')
+                ->first();
 
-        if (!$appointment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Appointment not found or already paid'
-            ], 404);
-        }
-
-        Stripe::setApiKey(config('services.stripe.secret'));
-
-        $amount = $request->amount * 100; // Convert to cents
-
-        $paymentIntent = PaymentIntent::create([
-            'amount' => $amount,
-            'currency' => 'usd',
-            'metadata' => [
-                'appointment_id' => $request->appointment_id,
-                'patient_id' => Auth::id(),
-                'type' => 'existing_appointment_payment'
-            ],
-            'automatic_payment_methods' => [
-                'enabled' => true,
-            ],
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'clientSecret' => $paymentIntent->client_secret,
-            'paymentIntentId' => $paymentIntent->id,
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Payment intent creation error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to create payment intent'
-        ], 500);
-    }
-}
-
-public function processPayment(Request $request)
-{
-    try {
-        $request->validate([
-            'appointment_id' => 'required|integer',
-            'payment_method' => 'required|in:stripe,paypal',
-            'stripe_payment_intent_id' => 'required_if:payment_method,stripe',
-        ]);
-
-        DB::beginTransaction();
-
-        $appointmentId = $request->appointment_id;
-
-        // Verify appointment
-        $appointment = DB::table('tbl_doctor_appointment')
-            ->where('id', $appointmentId)
-            ->where('user_id', Auth::id())
-            ->where('payment_status', 'pending')
-            ->first();
-
-        if (!$appointment) {
-            throw new \Exception('Appointment not found or already paid');
-        }
-
-        // Verify Stripe payment if applicable
-        $paymentIntentId = null;
-        $cardDetails = null;
-        $paymentDetails = null;
-
-        if ($request->payment_method === 'stripe') {
-            Stripe::setApiKey(config('services.stripe.secret'));
-            
-            try {
-                $paymentIntent = PaymentIntent::retrieve($request->stripe_payment_intent_id);
-                
-                if ($paymentIntent->status !== 'succeeded') {
-                    throw new \Exception('Payment not completed. Status: ' . $paymentIntent->status);
-                }
-                
-                $paymentIntentId = $request->stripe_payment_intent_id;
-                
-                // Store payment details
-                $paymentDetails = [
-                    'payment_intent' => $paymentIntent->id,
-                    'amount_received' => $paymentIntent->amount_received,
-                    'currency' => $paymentIntent->currency,
-                    'status' => $paymentIntent->status,
-                    'customer' => $paymentIntent->customer,
-                ];
-
-                // Extract card details if available
-                if (isset($paymentIntent->charges->data[0]->payment_method_details->card)) {
-                    $card = $paymentIntent->charges->data[0]->payment_method_details->card;
-                    $cardDetails = [
-                        'brand' => $card->brand,
-                        'last4' => $card->last4,
-                        'exp_month' => $card->exp_month,
-                        'exp_year' => $card->exp_year,
-                    ];
-                }
-
-            } catch (\Exception $e) {
-                throw new \Exception('Payment verification failed: ' . $e->getMessage());
+            if (!$appointment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Appointment not found or already paid'
+                ], 404);
             }
-        } else {
-            $paymentIntentId = 'paypal_' . time();
-        }
 
-        // Update appointment payment status
-        DB::table('tbl_doctor_appointment')
-            ->where('id', $appointmentId)
-            ->update([
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            $amount = $request->amount * 100; // Convert to cents
+
+            $paymentIntent = PaymentIntent::create([
+                'amount' => $amount,
+                'currency' => 'usd',
+                'metadata' => [
+                    'appointment_id' => $request->appointment_id,
+                    'patient_id' => Auth::id(),
+                    'type' => 'existing_appointment_payment'
+                ],
+                'automatic_payment_methods' => [
+                    'enabled' => true,
+                ],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'clientSecret' => $paymentIntent->client_secret,
+                'paymentIntentId' => $paymentIntent->id,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Payment intent creation error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create payment intent'
+            ], 500);
+        }
+    }
+
+    public function processPayment(Request $request)
+    {
+        try {
+            $request->validate([
+                'appointment_id' => 'required|integer',
+                'payment_method' => 'required|in:stripe,paypal',
+                'stripe_payment_intent_id' => 'required_if:payment_method,stripe',
+            ]);
+
+            DB::beginTransaction();
+
+            $appointmentId = $request->appointment_id;
+
+            // Verify appointment
+            $appointment = DB::table('tbl_doctor_appointment')
+                ->where('id', $appointmentId)
+                ->where('user_id', Auth::id())
+                ->where('payment_status', 'pending')
+                ->first();
+
+            if (!$appointment) {
+                throw new \Exception('Appointment not found or already paid');
+            }
+
+            // Verify Stripe payment if applicable
+            $paymentIntentId = null;
+            $cardDetails = null;
+            $paymentDetails = null;
+
+            if ($request->payment_method === 'stripe') {
+                Stripe::setApiKey(config('services.stripe.secret'));
+                
+                try {
+                    $paymentIntent = PaymentIntent::retrieve($request->stripe_payment_intent_id);
+                    
+                    if ($paymentIntent->status !== 'succeeded') {
+                        throw new \Exception('Payment not completed. Status: ' . $paymentIntent->status);
+                    }
+                    
+                    $paymentIntentId = $request->stripe_payment_intent_id;
+                    
+                    // Store payment details
+                    $paymentDetails = [
+                        'payment_intent' => $paymentIntent->id,
+                        'amount_received' => $paymentIntent->amount_received,
+                        'currency' => $paymentIntent->currency,
+                        'status' => $paymentIntent->status,
+                        'customer' => $paymentIntent->customer,
+                    ];
+
+                    // Extract card details if available
+                    if (isset($paymentIntent->charges->data[0]->payment_method_details->card)) {
+                        $card = $paymentIntent->charges->data[0]->payment_method_details->card;
+                        $cardDetails = [
+                            'brand' => $card->brand,
+                            'last4' => $card->last4,
+                            'exp_month' => $card->exp_month,
+                            'exp_year' => $card->exp_year,
+                        ];
+                    }
+
+                } catch (\Exception $e) {
+                    throw new \Exception('Payment verification failed: ' . $e->getMessage());
+                }
+            } else {
+                $paymentIntentId = 'paypal_' . time();
+            }
+
+            // Update appointment payment status
+            DB::table('tbl_doctor_appointment')
+                ->where('id', $appointmentId)
+                ->update([
+                    'payment_status' => 'paid',
+                    'payment_method' => $request->payment_method,
+                    'payment_intent_id' => $paymentIntentId,
+                    'paid_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            // Create payment record in tbl_payment
+            DB::table('tbl_payment')->insert([
+                'appointment_id' => $appointmentId,
+                'patient_id' => Auth::id(),
+                'doctor_id' => $appointment->doctor_id,
+                'amount' => $appointment->fee,
+                'currency' => 'USD',
+                'payment_method' => $request->payment_method,
+                'payment_gateway' => $request->payment_method,
+                'payment_intent_id' => $paymentIntentId,
+                'transaction_id' => $paymentIntentId,
+                'payment_status' => 'completed',
+                'gateway_status' => 'succeeded',
+                'payment_details' => $paymentDetails ? json_encode($paymentDetails) : null,
+                'card_details' => $cardDetails ? json_encode($cardDetails) : null,
+                'payer_email' => Auth::user()->email,
+                'payer_name' => Auth::user()->name,
+                'paid_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('patient.appointments')
+                ->with('success', 'Payment completed successfully! Appointment is now confirmed.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Payment processing error: ' . $e->getMessage());
+            
+            return redirect()->back()->with('error', 'Failed to process payment: ' . $e->getMessage());
+        }
+    }
+
+    public function cancelAppointment($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $appointment = DB::table('tbl_doctor_appointment')
+                ->where('id', $id)
+                ->where('user_id', Auth::id())
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->first();
+
+            if (!$appointment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Appointment not found or cannot be cancelled'
+                ], 404);
+            }
+
+            // Update appointment status
+            DB::table('tbl_doctor_appointment')
+                ->where('id', $id)
+                ->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            // Increase tokens in availability if appointment was confirmed
+            if ($appointment->status === 'confirmed') {
+                DB::table('tbl_availability')
+                    ->where('id', $appointment->availability_id)
+                    ->increment('number_of_tokens');
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Appointment cancelled successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Appointment cancellation error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel appointment'
+            ], 500);
+        }
+    }
+
+    public function bookAppointment(Request $request)
+    {
+        try {
+            $request->validate([
+                'availability_id' => 'required|integer',
+                'doctor_id' => 'required|integer',
+                'appointment_fee' => 'required|numeric',
+                'payment_method' => 'required|in:stripe,paypal',
+                'patient_notes' => 'nullable|string|max:500',
+                'stripe_payment_intent_id' => 'required_if:payment_method,stripe',
+            ]);
+
+            DB::beginTransaction();
+
+            $availabilityId = $request->availability_id;
+            $doctorId = $request->doctor_id;
+            $appointmentFee = $request->appointment_fee;
+
+            // Check availability
+            $availability = DB::table('tbl_availability')
+                ->where('id', $availabilityId)
+                ->where('number_of_tokens', '>', 0)
+                ->first();
+
+            if (!$availability) {
+                return redirect()->back()->with('error', 'Sorry, this time slot is no longer available.');
+            }
+
+            // Verify Stripe payment if applicable
+            $paymentIntentId = null;
+            $cardDetails = null;
+            $paymentDetails = null;
+
+            if ($request->payment_method === 'stripe') {
+                Stripe::setApiKey(config('services.stripe.secret'));
+                
+                try {
+                    $paymentIntent = PaymentIntent::retrieve($request->stripe_payment_intent_id);
+                    
+                    if ($paymentIntent->status !== 'succeeded') {
+                        throw new \Exception('Payment not completed. Status: ' . $paymentIntent->status);
+                    }
+                    
+                    $paymentIntentId = $request->stripe_payment_intent_id;
+                    
+                    // Store payment details
+                    $paymentDetails = [
+                        'payment_intent' => $paymentIntent->id,
+                        'amount_received' => $paymentIntent->amount_received,
+                        'currency' => $paymentIntent->currency,
+                        'status' => $paymentIntent->status,
+                        'customer' => $paymentIntent->customer,
+                    ];
+
+                    // Extract card details if available
+                    if (isset($paymentIntent->charges->data[0]->payment_method_details->card)) {
+                        $card = $paymentIntent->charges->data[0]->payment_method_details->card;
+                        $cardDetails = [
+                            'brand' => $card->brand,
+                            'last4' => $card->last4,
+                            'exp_month' => $card->exp_month,
+                            'exp_year' => $card->exp_year,
+                        ];
+                    }
+
+                } catch (\Exception $e) {
+                    throw new \Exception('Payment verification failed: ' . $e->getMessage());
+                }
+            } else {
+                $paymentIntentId = 'paypal_' . time();
+            }
+
+            // Create appointment
+            $appointmentId = DB::table('tbl_doctor_appointment')->insertGetId([
+                'user_id' => Auth::id(),
+                'doctor_id' => $doctorId,
+                'availability_id' => $availabilityId,
+                'appointment_date' => $availability->date,
+                'start_time' => $availability->start_time_slot,
+                'end_time' => $availability->end_time_slot,
+                'fee' => $appointmentFee,
+                'status' => 'confirmed',
                 'payment_status' => 'paid',
                 'payment_method' => $request->payment_method,
                 'payment_intent_id' => $paymentIntentId,
                 'paid_at' => now(),
+                'patient_notes' => $request->patient_notes,
+                'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-        // Create payment record in tbl_payment
-        DB::table('tbl_payment')->insert([
-            'appointment_id' => $appointmentId,
-            'patient_id' => Auth::id(),
-            'doctor_id' => $appointment->doctor_id,
-            'amount' => $appointment->fee,
-            'currency' => 'USD',
-            'payment_method' => $request->payment_method,
-            'payment_gateway' => $request->payment_method,
-            'payment_intent_id' => $paymentIntentId,
-            'transaction_id' => $paymentIntentId,
-            'payment_status' => 'completed',
-            'gateway_status' => 'succeeded',
-            'payment_details' => $paymentDetails ? json_encode($paymentDetails) : null,
-            'card_details' => $cardDetails ? json_encode($cardDetails) : null,
-            'payer_email' => Auth::user()->email,
-            'payer_name' => Auth::user()->name,
-            'paid_at' => now(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::commit();
-
-        return redirect()->route('patient.appointments')
-            ->with('success', 'Payment completed successfully! Appointment is now confirmed.');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Payment processing error: ' . $e->getMessage());
-        
-        return redirect()->back()->with('error', 'Failed to process payment: ' . $e->getMessage());
-    }
-}
-
-public function cancelAppointment($id)
-{
-    try {
-        DB::beginTransaction();
-
-        $appointment = DB::table('tbl_doctor_appointment')
-            ->where('id', $id)
-            ->where('user_id', Auth::id())
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->first();
-
-        if (!$appointment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Appointment not found or cannot be cancelled'
-            ], 404);
-        }
-
-        // Update appointment status
-        DB::table('tbl_doctor_appointment')
-            ->where('id', $id)
-            ->update([
-                'status' => 'cancelled',
-                'cancelled_at' => now(),
+            // Create payment record in tbl_payment
+            DB::table('tbl_payment')->insert([
+                'appointment_id' => $appointmentId,
+                'patient_id' => Auth::id(),
+                'doctor_id' => $doctorId,
+                'amount' => $appointmentFee,
+                'currency' => 'USD',
+                'payment_method' => $request->payment_method,
+                'payment_gateway' => $request->payment_method,
+                'payment_intent_id' => $paymentIntentId,
+                'transaction_id' => $paymentIntentId,
+                'payment_status' => 'completed',
+                'gateway_status' => 'succeeded',
+                'payment_details' => $paymentDetails ? json_encode($paymentDetails) : null,
+                'card_details' => $cardDetails ? json_encode($cardDetails) : null,
+                'payer_email' => Auth::user()->email,
+                'payer_name' => Auth::user()->name,
+                'paid_at' => now(),
+                'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-        // Increase tokens in availability if appointment was confirmed
-        if ($appointment->status === 'confirmed') {
-            DB::table('tbl_availability')
-                ->where('id', $appointment->availability_id)
-                ->increment('number_of_tokens');
-        }
-
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Appointment cancelled successfully'
-        ]);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Appointment cancellation error: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to cancel appointment'
-        ], 500);
-    }
-}
-
-public function bookAppointment(Request $request)
-{
-    try {
-        $request->validate([
-            'availability_id' => 'required|integer',
-            'doctor_id' => 'required|integer',
-            'appointment_fee' => 'required|numeric',
-            'payment_method' => 'required|in:stripe,paypal',
-            'patient_notes' => 'nullable|string|max:500',
-            'stripe_payment_intent_id' => 'required_if:payment_method,stripe',
-        ]);
-
-        DB::beginTransaction();
-
-        $availabilityId = $request->availability_id;
-        $doctorId = $request->doctor_id;
-        $appointmentFee = $request->appointment_fee;
-
-        // Check availability
-        $availability = DB::table('tbl_availability')
-            ->where('id', $availabilityId)
-            ->where('number_of_tokens', '>', 0)
-            ->first();
-
-        if (!$availability) {
-            return redirect()->back()->with('error', 'Sorry, this time slot is no longer available.');
-        }
-
-        // Verify Stripe payment if applicable
-        $paymentIntentId = null;
-        $cardDetails = null;
-        $paymentDetails = null;
-
-        if ($request->payment_method === 'stripe') {
-            Stripe::setApiKey(config('services.stripe.secret'));
-            
-            try {
-                $paymentIntent = PaymentIntent::retrieve($request->stripe_payment_intent_id);
-                
-                if ($paymentIntent->status !== 'succeeded') {
-                    throw new \Exception('Payment not completed. Status: ' . $paymentIntent->status);
-                }
-                
-                $paymentIntentId = $request->stripe_payment_intent_id;
-                
-                // Store payment details
-                $paymentDetails = [
-                    'payment_intent' => $paymentIntent->id,
-                    'amount_received' => $paymentIntent->amount_received,
-                    'currency' => $paymentIntent->currency,
-                    'status' => $paymentIntent->status,
-                    'customer' => $paymentIntent->customer,
-                ];
-
-                // Extract card details if available
-                if (isset($paymentIntent->charges->data[0]->payment_method_details->card)) {
-                    $card = $paymentIntent->charges->data[0]->payment_method_details->card;
-                    $cardDetails = [
-                        'brand' => $card->brand,
-                        'last4' => $card->last4,
-                        'exp_month' => $card->exp_month,
-                        'exp_year' => $card->exp_year,
-                    ];
-                }
-
-            } catch (\Exception $e) {
-                throw new \Exception('Payment verification failed: ' . $e->getMessage());
-            }
-        } else {
-            $paymentIntentId = 'paypal_' . time();
-        }
-
-        // Create appointment
-        $appointmentId = DB::table('tbl_doctor_appointment')->insertGetId([
-            'user_id' => Auth::id(),
-            'doctor_id' => $doctorId,
-            'availability_id' => $availabilityId,
-            'appointment_date' => $availability->date,
-            'start_time' => $availability->start_time_slot,
-            'end_time' => $availability->end_time_slot,
-            'fee' => $appointmentFee,
-            'status' => 'confirmed',
-            'payment_status' => 'paid',
-            'payment_method' => $request->payment_method,
-            'payment_intent_id' => $paymentIntentId,
-            'paid_at' => now(),
-            'patient_notes' => $request->patient_notes,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // Create payment record in tbl_payment
-        DB::table('tbl_payment')->insert([
-            'appointment_id' => $appointmentId,
-            'patient_id' => Auth::id(),
-            'doctor_id' => $doctorId,
-            'amount' => $appointmentFee,
-            'currency' => 'USD',
-            'payment_method' => $request->payment_method,
-            'payment_gateway' => $request->payment_method,
-            'payment_intent_id' => $paymentIntentId,
-            'transaction_id' => $paymentIntentId,
-            'payment_status' => 'completed',
-            'gateway_status' => 'succeeded',
-            'payment_details' => $paymentDetails ? json_encode($paymentDetails) : null,
-            'card_details' => $cardDetails ? json_encode($cardDetails) : null,
-            'payer_email' => Auth::user()->email,
-            'payer_name' => Auth::user()->name,
-            'paid_at' => now(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // Update availability
-        DB::table('tbl_availability')
-            ->where('id', $availabilityId)
-            ->decrement('number_of_tokens');
-
-        $updatedTokens = DB::table('tbl_availability')
-            ->where('id', $availabilityId)
-            ->value('number_of_tokens');
-
-        if ($updatedTokens <= 0) {
+            // Update availability
             DB::table('tbl_availability')
                 ->where('id', $availabilityId)
-                ->update(['status' => 'booked']);
+                ->decrement('number_of_tokens');
+
+            $updatedTokens = DB::table('tbl_availability')
+                ->where('id', $availabilityId)
+                ->value('number_of_tokens');
+
+            if ($updatedTokens <= 0) {
+                DB::table('tbl_availability')
+                    ->where('id', $availabilityId)
+                    ->update(['status' => 'booked']);
+            }
+
+            DB::commit();
+
+            return redirect()->route('patient.appointments')
+                ->with('success', 'Appointment booked successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Appointment booking error: ' . $e->getMessage());
+            
+            return redirect()->back()->with('error', 'Failed to book appointment: ' . $e->getMessage());
         }
-
-        DB::commit();
-
-        return redirect()->route('patient.appointments')
-            ->with('success', 'Appointment booked successfully!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Appointment booking error: ' . $e->getMessage());
-        
-        return redirect()->back()->with('error', 'Failed to book appointment: ' . $e->getMessage());
     }
-}
+ //////////////////////////////////////// end payment integration ////////////////////////////////////////   
     
-    
+///////////////////////////////////////// Start zoom integration ////////////////////////////////////////
 
+
+    public function createZoomMeeting($appointmentId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $appointment = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->join('users as doctor_user', 'd.doctor_id', '=', 'doctor_user.id')
+                ->join('users as patient_user', 'da.user_id', '=', 'patient_user.id')
+                ->where('da.id', $appointmentId)
+                ->where('da.user_id', Auth::id())
+                ->where('da.status', 'confirmed')
+                ->where('da.payment_status', 'paid')
+                ->select('da.*', 'doctor_user.name as doctor_name', 'patient_user.name as patient_name')
+                ->first();
+
+            if (!$appointment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Appointment not found or not eligible for meeting'
+                ], 404);
+            }
+
+            // Check if meeting already exists
+            if ($appointment->zoom_meeting_id) {
+                return response()->json([
+                    'success' => true,
+                    'meeting' => [
+                        'join_url' => $appointment->zoom_join_url,
+                        'meeting_id' => $appointment->zoom_meeting_id,
+                        'password' => $appointment->zoom_meeting_password
+                    ]
+                ]);
+            }
+
+            $zoomService = new ZoomService();
+            
+            $doctor = (object) ['name' => $appointment->doctor_name ];
+            $patient = (object) ['name' => $appointment->patient_name ];
+
+            $meeting = $zoomService->createMeeting($appointment, $doctor, $patient);
+
+            // Update appointment with Zoom meeting details
+            DB::table('tbl_doctor_appointment')
+                ->where('id', $appointmentId)
+                ->update([
+                    'zoom_meeting_id' => $meeting['id'],
+                    'zoom_meeting_password' => $meeting['password'],
+                    'zoom_join_url' => $meeting['join_url'],
+                    'zoom_start_url' => $meeting['start_url'],
+                    'meeting_created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'meeting' => [
+                    'join_url' => $meeting['join_url'],
+                    'meeting_id' => $meeting['id'],
+                    'password' => $meeting['password']
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Zoom Meeting Creation Error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create Zoom meeting: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function joinMeeting($appointmentId)
+    {
+        try {
+            $appointment = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->join('users as u', 'd.doctor_id', '=', 'u.id')
+                ->where('da.id', $appointmentId)
+                ->where('da.user_id', Auth::id())
+                ->where('da.status', 'confirmed')
+                ->where('da.payment_status', 'paid')
+                ->select(
+                    'da.*',
+                    'u.name as doctor_name',
+                    'da.zoom_join_url',
+                    'da.zoom_meeting_id',
+                    'da.zoom_meeting_password'
+                )
+                ->first();
+
+            if (!$appointment) {
+                return redirect()->back()->with('error', 'Appointment not found or not eligible for meeting.');
+            }
+
+            // If no meeting exists, create one
+            if (!$appointment->zoom_meeting_id) {
+                $meetingResponse = $this->createZoomMeeting($appointmentId);
+                
+                if ($meetingResponse->getData()->success) {
+                    $appointment->zoom_join_url = $meetingResponse->getData()->meeting->join_url;
+                    $appointment->zoom_meeting_password = $meetingResponse->getData()->meeting->password;
+                } else {
+                    return redirect()->back()->with('error', 'Failed to create meeting: ' . $meetingResponse->getData()->message);
+                }
+            }
+
+            // Verify meeting time (allow joining 10 minutes before and 30 minutes after)
+            $appointmentDateTime = \Carbon\Carbon::parse($appointment->appointment_date . ' ' . $appointment->start_time);
+            $now = \Carbon\Carbon::now();
+            
+            $canJoinEarly = $now->diffInMinutes($appointmentDateTime, false) <= 10; // 10 minutes before
+            $canJoinLate = $now->diffInMinutes($appointmentDateTime, false) >= -30; // 30 minutes after
+            
+            if (!$canJoinEarly && !$canJoinLate) {
+                return redirect()->back()->with('error', 'Meeting can only be joined 10 minutes before and up to 30 minutes after the scheduled time.');
+            }
+
+            // Redirect to Zoom meeting
+            return redirect()->away($appointment->zoom_join_url);
+
+        } catch (\Exception $e) {
+            Log::error('Join Meeting Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to join meeting: ' . $e->getMessage());
+        }
+    }
 }
 
 

@@ -123,6 +123,11 @@ Route::post('/create-payment-intent', [PatientController::class, 'createPaymentI
 Route::post('/book-appointment', [PatientController::class, 'bookAppointment'])->name('patient.book.appointment');
 Route::post('/appointments/process-payment', [PatientController::class, 'processPayment'])->name('patient.process.payment');
 Route::post('/appointments/{id}/cancel', [PatientController::class, 'cancelAppointment'])->name('patient.cancel.appointment');
+
+
+Route::post('/appointments/{id}/create-meeting', [PatientController::class, 'createZoomMeeting'])->name('patient.create.meeting');
+Route::get('/meeting/{id}', [PatientController::class, 'joinMeeting'])->name('patient.join.meeting');
+
 });
 
 
