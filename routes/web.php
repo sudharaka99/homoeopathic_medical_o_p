@@ -24,6 +24,7 @@ use Illuminate\Http\Request;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 
+
 Route::group(['middleware' => 'guest'], function () {
     Route::get('/register', [AccountController::class, 'registration'])->name('account.registration');
     Route::post('/process-register', [AccountController::class, 'processRegistration'])->name('account.processRegistration');
@@ -127,6 +128,21 @@ Route::post('/appointments/{id}/cancel', [PatientController::class, 'cancelAppoi
 
 Route::post('/appointments/{id}/create-meeting', [PatientController::class, 'createZoomMeeting'])->name('patient.create.meeting');
 Route::get('/meeting/{id}', [PatientController::class, 'joinMeeting'])->name('patient.join.meeting');
+
+
+//contact page
+// Contact Routes
+Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
+Route::post('/contact', [HomeController::class, 'contactSubmit'])->name('contact.submit');
+
+// Admin Contact Management Routes
+Route::middleware(['auth'])->prefix('admin')->group(function () {
+    Route::get('/contacts', [HomeController::class, 'adminIndex'])->name('admin.contacts.index');
+    Route::get('/contacts/{id}', [HomeController::class, 'adminShow'])->name('admin.contacts.show');
+    Route::post('/contacts/{id}/status', [HomeController::class, 'adminUpdateStatus'])->name('admin.contacts.update-status');
+    Route::post('/contacts/{id}/reply', [HomeController::class, 'adminSendReply'])->name('admin.contacts.send-reply');
+    Route::delete('/contacts/{id}', [HomeController::class, 'adminDestroy'])->name('admin.contacts.destroy');
+});
 
 });
 
