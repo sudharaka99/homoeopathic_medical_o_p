@@ -37,98 +37,94 @@ class AdminController extends Controller
 public function dashboard()
 {
 
-        // Get counts for dashboard statistics
-        $patientCount = DB::table('users')->where('role', 'patient')->count();
-        $doctorCount = DB::table('users')->where('role', 'doctor')->count();
-        
-        // For doctor status, check tbl_doctor table
-        $approvedDoctors = DB::table('tbl_doctor')
-            ->where('is_admin_confirmed', 1)
-            ->count();
-            
-        $pendingDoctors = DB::table('tbl_doctor')
-            ->where('is_admin_confirmed', 0)
-            ->count();
-        
-        // // Get appointment statistics - adjust table name as needed
-        // $totalAppointments = DB::table('tbl_appointments')->count();
-        // $todayAppointments = DB::table('tbl_appointments')
-        //     ->whereDate('appointment_date', today())
-        //     ->count();
-        
-        // // Get recent pending doctors for the sidebar
-        // $recentPendingDoctors = DB::table('tbl_doctor as d')
-        //     ->join('users as u', 'd.doctor_id', '=', 'u.id')
-        //     ->leftJoin('tbl_specializations as s', 'd.specialization', '=', 's.id')
-        //     ->select(
-        //         'u.name',
-        //         'd.specialization',
-        //         'd.created_at',
-        //         's.name as specialization_name'
-        //     )
-        //     ->where('d.is_admin_confirmed', 0)
-        //     ->orderBy('d.created_at', 'desc')
-        //     ->limit(5)
-        //     ->get();
-        
-        // // Get recent appointments
-        // $recentAppointments = DB::table('tbl_appointments as a')
-        //     ->join('users as patient', 'a.patient_id', '=', 'patient.id')
-        //     ->join('users as doctor', 'a.doctor_id', '=', 'doctor.id')
-        //     ->select(
-        //         'patient.name as patient_name',
-        //         'doctor.name as doctor_name',
-        //         'a.appointment_date',
-        //         'a.status'
-        //     )
-        //     ->orderBy('a.appointment_date', 'desc')
-        //     ->limit(5)
-        //     ->get();
-        
-        // Get registration data for the chart (last 6 months)
-        $months = [];
-        $patientRegistrations = [];
-        $doctorRegistrations = [];
-        
-        for ($i = 5; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $months[] = $date->format('M Y');
-            
-            $patientRegistrations[] = DB::table('users')
-                ->where('role', 'patient')
-                ->whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->count();
-                
-            $doctorRegistrations[] = DB::table('users')
-                ->where('role', 'doctor')
-                ->whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->count();
-        }
-        
-        return view('admin.dashboard', compact(
-            'patientCount',
-            'doctorCount',
-            'approvedDoctors',
-            'pendingDoctors',
-            // 'totalAppointments',
-            // 'todayAppointments',
-            // 'recentPendingDoctors',
-            // 'recentAppointments',
-            'months',
-            'patientRegistrations',
-            'doctorRegistrations'
-        ));
-
+    // Get counts for dashboard statistics
+    $patientCount = DB::table('users')->where('role', 'patient')->count();
+    $doctorCount = DB::table('users')->where('role', 'doctor')->count();
     
+    // For doctor status, check tbl_doctor table
+    $approvedDoctors = DB::table('tbl_doctor')
+        ->where('is_admin_confirmed', 1)
+        ->count();
+        
+    $pendingDoctors = DB::table('tbl_doctor')
+        ->where('is_admin_confirmed', 0)
+        ->count();
+    
+    // // Get appointment statistics - adjust table name as needed
+    // $totalAppointments = DB::table('tbl_appointments')->count();
+    // $todayAppointments = DB::table('tbl_appointments')
+    //     ->whereDate('appointment_date', today())
+    //     ->count();
+    
+    // // Get recent pending doctors for the sidebar
+    // $recentPendingDoctors = DB::table('tbl_doctor as d')
+    //     ->join('users as u', 'd.doctor_id', '=', 'u.id')
+    //     ->leftJoin('tbl_specializations as s', 'd.specialization', '=', 's.id')
+    //     ->select(
+    //         'u.name',
+    //         'd.specialization',
+    //         'd.created_at',
+    //         's.name as specialization_name'
+    //     )
+    //     ->where('d.is_admin_confirmed', 0)
+    //     ->orderBy('d.created_at', 'desc')
+    //     ->limit(5)
+    //     ->get();
+    
+    // // Get recent appointments
+    // $recentAppointments = DB::table('tbl_appointments as a')
+    //     ->join('users as patient', 'a.patient_id', '=', 'patient.id')
+    //     ->join('users as doctor', 'a.doctor_id', '=', 'doctor.id')
+    //     ->select(
+    //         'patient.name as patient_name',
+    //         'doctor.name as doctor_name',
+    //         'a.appointment_date',
+    //         'a.status'
+    //     )
+    //     ->orderBy('a.appointment_date', 'desc')
+    //     ->limit(5)
+    //     ->get();
+    
+    // Get registration data for the chart (last 6 months)
+    $months = [];
+    $patientRegistrations = [];
+    $doctorRegistrations = [];
+    
+    for ($i = 5; $i >= 0; $i--) {
+        $date = now()->subMonths($i);
+        $months[] = $date->format('M Y');
+        
+        $patientRegistrations[] = DB::table('users')
+            ->where('role', 'patient')
+            ->whereYear('created_at', $date->year)
+            ->whereMonth('created_at', $date->month)
+            ->count();
+            
+        $doctorRegistrations[] = DB::table('users')
+            ->where('role', 'doctor')
+            ->whereYear('created_at', $date->year)
+            ->whereMonth('created_at', $date->month)
+            ->count();
     }
-
-
     
+    return view('admin.dashboard', compact(
+        'patientCount',
+        'doctorCount',
+        'approvedDoctors',
+        'pendingDoctors',
+        // 'totalAppointments',
+        // 'todayAppointments',
+        // 'recentPendingDoctors',
+        // 'recentAppointments',
+        'months',
+        'patientRegistrations',
+        'doctorRegistrations'
+    ));
 
 
-  public function pendingDoctors()
+}
+
+public function pendingDoctors()
 {
     try {
         $pendingDoctors = DB::table('tbl_doctor as d')
@@ -332,4 +328,86 @@ public function rejectDoctor(Request $request)
         ], 500);
     }
 }
+
+
+    public function userFeedback(Request $request)
+    {
+        // Base query
+        $query = DB::table('tbl_contacts_us')->orderBy('created_at', 'desc');
+        
+        // Apply status filter if provided
+        if ($request->has('status') && $request->status != '') {
+            $query->where('status', $request->status);
+        }
+        
+        $messages = $query->get();
+        
+        // Get counts for all statuses
+        $totalMessages = DB::table('tbl_contacts_us')->count();
+        $newCount = DB::table('tbl_contacts_us')->where('status', 'new')->count();
+        $inProgressCount = DB::table('tbl_contacts_us')->where('status', 'in_progress')->count();
+        $resolvedCount = DB::table('tbl_contacts_us')->where('status', 'resolved')->count();
+
+        return view('admin.user_feedback', compact('messages', 'totalMessages', 'newCount', 'inProgressCount', 'resolvedCount'));
+    }
+
+    public function replyToMessage(Request $request)
+    {
+        $request->validate([
+            'message_id' => 'required|exists:tbl_contacts_us,id',
+            'reply_message' => 'required|min:3'
+        ]);
+
+        try {
+            DB::table('tbl_contacts_us')
+                ->where('id', $request->message_id)
+                ->update([
+                    'reply_message' => $request->reply_message,
+                    'replied_by' => auth()->id(),
+                    'replied_at' => now(),
+                    'status' => 'resolved',
+                    'updated_at' => now()
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reply sent successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateMessageStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:new,in_progress,resolved'
+        ]);
+
+        DB::table('tbl_contacts_us')
+            ->where('id', $id)
+            ->update([
+                'status' => $request->status,
+                'updated_at' => now()
+            ]);
+
+        return back()->with('success', 'Status updated successfully!');
+    }
+
+    public function deleteMessage($id)
+    {
+        DB::table('tbl_contacts_us')
+            ->where('id', $id)
+            ->delete();
+
+        return back()->with('success', 'Message deleted successfully!');
+    }
+
+
+
+
 }

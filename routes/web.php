@@ -56,14 +56,26 @@ Route::post('/admin/approve-doctor', [AdminController::class, 'approveDoctor'])-
 Route::post('/admin/reject-doctor', [AdminController::class, 'rejectDoctor'])->name('admin.rejectDoctor');
 Route::get('/admin/doctor-details', [AdminController::class, 'doctorDetails'])->name('admin.doctorDetails');
 
+// Admin Contact Routes
 
-
+// Admin Contact Routes
+Route::get('/admin/user-feedback', [AdminController::class, 'userFeedback'])->name('admin.user-feedback');
+Route::put('/admin/contact/{id}/status', [AdminController::class, 'updateMessageStatus'])->name('admin.contact.update-status');
+Route::post('/admin/contact/reply', [AdminController::class, 'replyToMessage'])->name('admin.contact.reply');
+Route::delete('/admin/contact/{id}', [AdminController::class, 'deleteMessage'])->name('admin.contact.destroy');
 
 //doctor
 Route::get('/doctor/dashboard', [DoctorController::class, 'index'])->name('doctor.dashboard');
 Route::get('/doctor/profile', [DoctorController::class, 'profile'])->name('doctor.profile');
 Route::put('/doctor/update-profile', [DoctorController::class, 'updateDoctorProfile'])->name('doctor.updateProfile');
 // Route::get('/doctor/add-availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');
+///// patiend documents and medical details
+Route::get('/patients', [DoctorController::class, 'myPatients'])->name('doctor.patients');
+Route::get('/patient/{patientId}/medical-details', [DoctorController::class, 'patientMedicalDetails'])->name('doctor.patient.medical-details');
+Route::get('/patient/{patientId}/document/{documentType}/{id}/view', [DoctorController::class, 'viewPatientDocument'])->name('doctor.patient.document.view');
+Route::get('/patient/{patientId}/document/{documentType}/{id}/download', [DoctorController::class, 'downloadPatientDocument'])->name('doctor.patient.document.download');
+
+
 
 
 Route::get('/doctor/availability', [DoctorController::class, 'addAvailability'])->name('doctor.addAvailability');

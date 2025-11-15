@@ -5,7 +5,7 @@
 {{-- Hero Section --}}
 <section 
   class="section-0 lazy d-flex bg-image-style dark align-items-center" 
-  data-bg="{{ asset('assets/images/contact-hero-bg.jpg') }}"
+  data-bg="{{ asset('assets/images/Homeopathy-Medicine.jpg') }}"
   style="min-height: 50vh; background-size: cover; background-position: center; color: #fff;"
 >
   <div class="container text-center">
@@ -150,6 +150,149 @@
             </div>
           </form>
         </div>
+
+        {{-- Message History Section --}}
+        @auth
+        <div class="mt-5">
+          <div class="card border-0 shadow">
+            <div class="card-header bg-light">
+              <h4 class="mb-0"><i class="fas fa-history me-2"></i>Your Message History</h4>
+            </div>
+            <div class="card-body p-0">
+              @if($contactMessages->count() > 0)
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th width="25%">Subject</th>
+                        <th width="15%">Date</th>
+                        <th width="15%">Status</th>
+                        <th width="35%">Preview</th>
+                        <th width="10%" class="text-center">View</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @foreach($contactMessages as $message)
+                        <tr class="message-row">
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <i class="fas fa-envelope text-primary me-2"></i>
+                              <strong>{{ Str::limit($message->subject, 20) }}</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <small class="text-muted">
+                              {{ \Carbon\Carbon::parse($message->created_at)->format('M j, Y') }}
+                            </small>
+                          </td>
+                          <td>
+                            <span class="badge 
+                              @if($message->status == 'resolved') bg-success
+                              @elseif($message->status == 'in_progress') bg-info
+                              @else bg-secondary @endif">
+                              {{ ucfirst(str_replace('_', ' ', $message->status)) }}
+                            </span>
+                          </td>
+                          <td>
+                            <span class="text-muted">
+                              {{ Str::limit($message->message, 40) }}
+                            </span>
+                          </td>
+                          <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary view-message" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#messageDetails{{ $message->id }}"
+                                    data-message-id="{{ $message->id }}">
+                              <i class="fas fa-eye"></i>
+                            </button>
+                          </td>
+                        </tr>
+                        {{-- Expandable Details Row --}}
+                        <tr class="detail-row">
+                          <td colspan="5" class="p-0 border-0">
+                            <div class="collapse" id="messageDetails{{ $message->id }}">
+                              <div class="card-body bg-light border-top">
+                                <div class="row">
+                                  <div class="col-md-6">
+                                    <div class="card border-0 h-100">
+                                      <div class="card-header bg-white py-2">
+                                        <h6 class="mb-0 text-primary">
+                                          <i class="fas fa-user me-1"></i>Your Message
+                                        </h6>
+                                      </div>
+                                      <div class="card-body">
+                                        <p class="mb-2"><strong>Subject:</strong> {{ $message->subject }}</p>
+                                        <p class="mb-2"><strong>Sent:</strong> 
+                                          {{ \Carbon\Carbon::parse($message->created_at)->format('M j, Y \a\t g:i A') }}
+                                        </p>
+                                        <div class="message-content mt-3 p-3 bg-white rounded border">
+                                          <p class="mb-0">{{ $message->message }}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="col-md-6">
+                                    <div class="card border-0 h-100">
+                                      <div class="card-header bg-white py-2">
+                                        <h6 class="mb-0 text-success">
+                                          <i class="fas fa-user-shield me-1"></i>Admin Response
+                                        </h6>
+                                      </div>
+                                      <div class="card-body">
+                                        @if($message->reply_message)
+                                          <p class="mb-2"><strong>Replied:</strong> 
+                                            @if($message->replied_at)
+                                              {{ \Carbon\Carbon::parse($message->replied_at)->format('M j, Y \a\t g:i A') }}
+                                            @else
+                                              <span class="text-muted">Not specified</span>
+                                            @endif
+                                          </p>
+                                          @if($message->replied_by && $message->admin)
+                                            <p class="mb-2"><strong>By:</strong> {{ $message->admin->name }}</p>
+                                          @endif
+                                          <div class="reply-content mt-3 p-3 bg-success bg-opacity-10 rounded border border-success">
+                                            <p class="mb-0">{{ $message->reply_message }}</p>
+                                          </div>
+                                        @else
+                                          <div class="text-center py-4">
+                                            <i class="fas fa-clock fa-2x text-muted mb-3"></i>
+                                            <p class="text-muted mb-0">No response yet. We'll get back to you soon.</p>
+                                          </div>
+                                        @endif
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      @endforeach
+                    </tbody>
+                  </table>
+                </div>
+                {{-- Pagination --}}
+                {{-- @if($contactMessages->hasPages())
+                  <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <small class="text-muted">
+                        Showing {{ $contactMessages->firstItem() }} to {{ $contactMessages->lastItem() }} of {{ $contactMessages->total() }} messages
+                      </small>
+                      {{ $contactMessages->links() }}
+                    </div>
+                  </div>
+                @endif --}}
+              @else
+                <div class="text-center py-5">
+                  <i class="fas fa-envelope-open-text fa-3x text-muted mb-3"></i>
+                  <h5>No Messages Yet</h5>
+                  <p class="text-muted">You haven't sent any messages yet.</p>
+                </div>
+              @endif
+            </div>
+          </div>
+        </div>
+        @endauth
       </div>
 
       {{-- Contact Info --}}
@@ -234,13 +377,23 @@
           @endphp
           @foreach($faqs as $i => $faq)
           <div class="accordion-item border-0 shadow-sm mb-3">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ $i+1 }}">
+            <h2 class="accordion-header" id="faqHeading{{ $i+1 }}">
+              <button class="accordion-button {{ $i === 0 ? '' : 'collapsed' }}" 
+                      type="button" 
+                      data-bs-toggle="collapse" 
+                      data-bs-target="#faqCollapse{{ $i+1 }}" 
+                      aria-expanded="{{ $i === 0 ? 'true' : 'false' }}" 
+                      aria-controls="faqCollapse{{ $i+1 }}">
                 {{ $faq[0] }}
               </button>
             </h2>
-            <div id="faq{{ $i+1 }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-              <div class="accordion-body">{!! $faq[1] !!}</div>
+            <div id="faqCollapse{{ $i+1 }}" 
+                 class="accordion-collapse collapse {{ $i === 0 ? 'show' : '' }}" 
+                 aria-labelledby="faqHeading{{ $i+1 }}" 
+                 data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                {!! $faq[1] !!}
+              </div>
             </div>
           </div>
           @endforeach
@@ -307,6 +460,49 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Message History Table Functionality
+    const viewButtons = document.querySelectorAll('.view-message');
+    
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const messageId = this.getAttribute('data-message-id');
+            const target = this.getAttribute('data-bs-target');
+            const collapseElement = document.querySelector(target);
+            
+            // Toggle button text and icon
+            if (collapseElement.classList.contains('show')) {
+                this.innerHTML = '<i class="fas fa-eye"></i>';
+                this.classList.remove('btn-primary');
+                this.classList.add('btn-outline-primary');
+            } else {
+                this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary');
+            }
+        });
+    });
+
+    // Auto-close other expanded rows when opening a new one
+    document.addEventListener('show.bs.collapse', function (e) {
+        const allCollapses = document.querySelectorAll('.collapse');
+        allCollapses.forEach(collapse => {
+            if (collapse !== e.target && collapse.classList.contains('show')) {
+                const bsCollapse = new bootstrap.Collapse(collapse, {
+                    toggle: false
+                });
+                bsCollapse.hide();
+                
+                // Reset button states
+                const button = document.querySelector(`[data-bs-target="#${collapse.id}"]`);
+                if (button) {
+                    button.innerHTML = '<i class="fas fa-eye"></i>';
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-outline-primary');
+                }
+            }
+        });
+    });
+
     // SweetAlert Functions
     function showSuccess(message) {
         Swal.fire({
@@ -319,6 +515,11 @@ document.addEventListener('DOMContentLoaded', function () {
             timerProgressBar: true,
             customClass: {
                 popup: 'border-success'
+            }
+        }).then((result) => {
+            if (result.isConfirmed || result.isDismissed) {
+                // Refresh page to show updated message history
+                location.reload();
             }
         });
     }
@@ -378,7 +579,6 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => {
             if (!response.ok) {
-                // If response is not OK, try to parse as JSON for validation errors
                 return response.json().then(errorData => {
                     throw errorData;
                 }).catch(() => {
@@ -390,19 +590,6 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             if (data.success) {
                 showSuccess(data.message);
-                
-                // Reset form but preserve auth user data
-                form.reset();
-                updateCharCount();
-                
-                @auth
-                document.getElementById('name').value = '{{ Auth::user()->name }}';
-                document.getElementById('email').value = '{{ Auth::user()->email }}';
-                @if(auth()->user()->phone)
-                document.getElementById('phone').value = '{{ auth()->user()->phone }}';
-                @endif
-                @endauth
-                
             } else {
                 throw new Error(data.message || 'Failed to send message');
             }
@@ -411,10 +598,8 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Error:', error);
             
             if (error.errors) {
-                // Laravel validation errors
                 showValidationErrors(error.errors);
                 
-                // Highlight fields with errors
                 Object.keys(error.errors).forEach(field => {
                     const input = document.querySelector(`[name="${field}"]`);
                     if (input) {
@@ -426,7 +611,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
             } else {
-                // General error
                 showError(error.message || 'Something went wrong. Please try again.');
             }
         })
@@ -461,5 +645,74 @@ document.addEventListener('DOMContentLoaded', function () {
 .text-warning { color: #ffc107 !important; }
 .text-danger { color: #dc3545 !important; }
 .text-success { color: #198754 !important; }
+
+/* Message History Table Styles */
+.message-row:hover {
+    background-color: #f8f9fa !important;
+}
+
+.detail-row {
+    background-color: transparent !important;
+}
+
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+}
+
+.message-content, .reply-content {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .btn-sm {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .message-content, .reply-content {
+        font-size: 0.8rem;
+    }
+    
+    .card-body .row {
+        flex-direction: column;
+    }
+    
+    .card-body .col-md-6 {
+        margin-bottom: 1rem;
+    }
+}
 </style>
 @endsection

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage; 
 
 class DoctorController extends Controller
 {
@@ -785,6 +786,370 @@ public function updateDoctorProfile(Request $request)
             return response()->json(['success' => false, 'message' => 'Failed to load appointment details.']);
         }
     }
+
+//////////////////////////////// patient medical record ////////////////////////////
+
+// Add these methods to your DoctorController or AdminController
+
+public function myPatients(Request $request)
+{
+    $userId = Auth::id();
+    
+    // First, get the doctor's record from tbl_doctor
+    $doctorRecord = DB::table('tbl_doctor')
+        ->where('doctor_id', $userId)
+        ->first();
+
+    if (!$doctorRecord) {
+        \Log::info("User is not registered as a doctor in tbl_doctor table");
+        $patients = [];
+        return view('front.account.doctor.patients', compact('patients'));
+    }
+
+    // Get all appointments for this doctor with patient details
+    $appointments = DB::table('tbl_doctor_appointment as a')
+        ->join('users as u', 'a.user_id', '=', 'u.id')
+        ->leftJoin('tbl_medical_info as m', 'a.user_id', '=', 'm.user_id')
+        ->select(
+            'a.*',
+            'u.name as patient_name',
+            'u.email as patient_email',
+            'u.mobile as patient_phone',
+            'u.profile_photo_path as patient_photo',
+            'm.medical_history',
+            'm.current_medications',
+            'm.allergies',
+            'm.emergency_contact_name',
+            'm.emergency_contact_phone'
+        )
+        ->where('a.doctor_id', $doctorRecord->id) // Use tbl_doctor.id here
+        ->whereIn('a.status', ['confirmed', 'completed'])
+        ->orderBy('a.appointment_date', 'desc')
+        ->get();
+
+    // Group appointments by patient
+    $patients = $appointments->groupBy('user_id')->map(function ($patientAppointments) {
+        $firstAppointment = $patientAppointments->first();
+        return [
+            'patient_id' => $firstAppointment->user_id,
+            'patient_name' => $firstAppointment->patient_name,
+            'patient_email' => $firstAppointment->patient_email,
+            'patient_phone' => $firstAppointment->patient_phone,
+            'patient_photo' => $firstAppointment->patient_photo,
+            'medical_history' => $firstAppointment->medical_history,
+            'current_medications' => $firstAppointment->current_medications,
+            'allergies' => $firstAppointment->allergies,
+            'emergency_contact_name' => $firstAppointment->emergency_contact_name,
+            'emergency_contact_phone' => $firstAppointment->emergency_contact_phone,
+            'appointments_count' => $patientAppointments->count(),
+            'last_appointment' => $patientAppointments->first()->appointment_date,
+            'appointments' => $patientAppointments
+        ];
+    });
+
+    return view('front.account.doctor.patients', compact('patients'));
+}
+
+public function patientMedicalDetails($patientId)
+{
+    $userId = Auth::id();
+    
+    // First, get the doctor's record from tbl_doctor
+    $doctorRecord = DB::table('tbl_doctor')
+        ->where('doctor_id', $userId)
+        ->first();
+
+    if (!$doctorRecord) {
+        abort(403, 'You are not registered as a doctor.');
+    }
+
+    // Verify that this doctor has appointments with this patient
+    // Use tbl_doctor.id for the doctor_id in appointments
+    $hasAccess = DB::table('tbl_doctor_appointment')
+        ->where('doctor_id', $doctorRecord->id) // Use tbl_doctor.id here
+        ->where('user_id', $patientId)
+        ->whereIn('status', ['confirmed', 'completed'])
+        ->exists();
+
+    if (!$hasAccess) {
+        abort(403, 'You do not have access to this patient\'s medical information. You need confirmed or completed appointments with this patient.');
+    }
+
+    // Get patient basic info
+    $patient = DB::table('users')
+        ->where('id', $patientId)
+        ->select('id', 'name', 'email', 'mobile as phone', 'profile_photo_path') // Changed 'phone' to 'mobile'
+        ->first();
+
+    if (!$patient) {
+        abort(404, 'Patient not found.');
+    }
+
+    // Get medical information
+    $medicalInfo = DB::table('tbl_medical_info')
+        ->where('user_id', $patientId)
+        ->first();
+
+    if (!$medicalInfo) {
+        $medicalInfo = (object) [
+            'medical_history' => null,
+            'current_medications' => null,
+            'allergies' => null,
+            'hemoglobin' => null,
+            'rbc_count' => null,
+            'wbc_count' => null,
+            'platelet_count' => null,
+            'blood_sugar' => null,
+            'cholesterol' => null,
+            'emergency_contact_name' => null,
+            'emergency_contact_relation' => null,
+            'emergency_contact_phone' => null,
+            'created_at' => null,
+            'updated_at' => null,
+        ];
+    }
+
+    // Get all medical documents
+    $bloodTestReports = DB::table('tbl_blood_test_reports')
+        ->where('user_id', $patientId)
+        ->orderBy('created_at', 'desc')
+        ->get();
+        
+    $prescriptions = DB::table('tbl_prescriptions')
+        ->where('user_id', $patientId)
+        ->orderBy('created_at', 'desc')
+        ->get();
+        
+    $medicalReports = DB::table('tbl_medical_reports')
+        ->where('user_id', $patientId)
+        ->orderBy('created_at', 'desc')
+        ->get();
+        
+    $insuranceDocuments = DB::table('tbl_insurance_documents')
+        ->where('user_id', $patientId)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    // Get appointment history with this doctor
+    $appointments = DB::table('tbl_doctor_appointment')
+        ->where('doctor_id', $doctorRecord->id) // Use tbl_doctor.id here
+        ->where('user_id', $patientId)
+        ->orderBy('appointment_date', 'desc')
+        ->get();
+
+    return view('front.account.doctor.patient-medical-details', compact(
+        'patient',
+        'medicalInfo',
+        'bloodTestReports',
+        'prescriptions',
+        'medicalReports',
+        'insuranceDocuments',
+        'appointments'
+    ));
+}
+
+public function viewPatientDocument($patientId, $documentType, $id)
+{
+    $userId = Auth::id();
+    
+    // Get the doctor's record
+    $doctorRecord = DB::table('tbl_doctor')
+        ->where('doctor_id', $userId)
+        ->first();
+
+    if (!$doctorRecord) {
+        abort(403, 'You are not registered as a doctor.');
+    }
+
+    // Verify access - use tbl_doctor.id
+    $hasAccess = DB::table('tbl_doctor_appointment')
+        ->where('doctor_id', $doctorRecord->id)
+        ->where('user_id', $patientId)
+        ->whereIn('status', ['confirmed', 'completed'])
+        ->exists();
+
+    if (!$hasAccess) {
+        abort(403, 'You do not have access to this document.');
+    }
+
+    try {
+        $table = $this->getTableName($documentType);
+        
+        if (!$table) {
+            abort(404, 'Invalid document type');
+        }
+
+        $record = DB::table($table)
+            ->where('id', $id)
+            ->where('user_id', $patientId)
+            ->first();
+            
+        if (!$record) {
+            abort(404, 'Document not found in database.');
+        }
+
+        // Debug: Log what we found
+        \Log::info('Document record found:', [
+            'table' => $table,
+            'patient_id' => $patientId,
+            'document_id' => $id,
+            'file_path' => $record->file_path,
+            'record' => $record
+        ]);
+
+        // Try multiple possible file paths
+        $possiblePaths = [
+            "medical-documents/{$table}/{$patientId}/{$record->file_path}",
+            "medical-documents/{$table}/{$record->file_path}",
+            $record->file_path, // Direct path as stored
+            "public/medical-documents/{$table}/{$patientId}/{$record->file_path}",
+        ];
+
+        $foundPath = null;
+        foreach ($possiblePaths as $path) {
+            if (Storage::disk('public')->exists($path)) {
+                $foundPath = $path;
+                \Log::info("File found at path: {$path}");
+                break;
+            }
+            \Log::info("File not found at path: {$path}");
+        }
+
+        if (!$foundPath) {
+            // List all files in the directory for debugging
+            $directory = "medical-documents/{$table}/{$patientId}/";
+            if (Storage::disk('public')->exists($directory)) {
+                $files = Storage::disk('public')->files($directory);
+                \Log::info("Files in directory {$directory}:", $files);
+            } else {
+                \Log::error("Directory does not exist: {$directory}");
+            }
+            
+            abort(404, 'Document file not found in any expected location.');
+        }
+
+        $fullPath = Storage::disk('public')->path($foundPath);
+        
+        // Check if file is readable
+        if (!is_readable($fullPath)) {
+            \Log::error('File exists but is not readable: ' . $fullPath);
+            abort(500, 'Document file is not readable.');
+        }
+
+        \Log::info('Serving file: ' . $fullPath);
+
+        // Determine content type
+        $extension = pathinfo($record->file_path, PATHINFO_EXTENSION);
+        $contentType = $this->getContentType($extension);
+
+        return response()->file($fullPath, [
+            'Content-Type' => $contentType,
+            'Content-Disposition' => 'inline; filename="' . basename($record->file_path) . '"',
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Document view error: ' . $e->getMessage());
+        \Log::error($e->getTraceAsString());
+        abort(500, 'Unable to view document: ' . $e->getMessage());
+    }
+}
+
+public function downloadPatientDocument($patientId, $documentType, $id)
+{
+    $userId = Auth::id();
+    
+    // Get the doctor's record
+    $doctorRecord = DB::table('tbl_doctor')
+        ->where('doctor_id', $userId)
+        ->first();
+
+    if (!$doctorRecord) {
+        abort(403, 'You are not registered as a doctor.');
+    }
+
+    // Verify access - use tbl_doctor.id
+    $hasAccess = DB::table('tbl_doctor_appointment')
+        ->where('doctor_id', $doctorRecord->id)
+        ->where('user_id', $patientId)
+        ->whereIn('status', ['confirmed', 'completed'])
+        ->exists();
+
+    if (!$hasAccess) {
+        abort(403, 'You do not have access to this document.');
+    }
+
+    try {
+        $table = $this->getTableName($documentType);
+        
+        if (!$table) {
+            abort(404, 'Invalid document type');
+        }
+
+        $record = DB::table($table)
+            ->where('id', $id)
+            ->where('user_id', $patientId)
+            ->first();
+            
+        if (!$record) {
+            abort(404, 'Document not found');
+        }
+
+        // Try multiple possible file paths
+        $possiblePaths = [
+            "medical-documents/{$table}/{$patientId}/{$record->file_path}",
+            "medical-documents/{$table}/{$record->file_path}",
+            $record->file_path, // Direct path as stored
+            "public/medical-documents/{$table}/{$patientId}/{$record->file_path}",
+        ];
+
+        $foundPath = null;
+        foreach ($possiblePaths as $path) {
+            if (Storage::disk('public')->exists($path)) {
+                $foundPath = $path;
+                break;
+            }
+        }
+
+        if (!$foundPath) {
+            abort(404, 'Document file not found.');
+        }
+
+        return Storage::disk('public')->download($foundPath, basename($record->file_path));
+        
+    } catch (\Exception $e) {
+        \Log::error('Document download error: ' . $e->getMessage());
+        abort(500, 'Unable to download document');
+    }
+}
+
+private function getTableName($documentType)
+{
+    $map = [
+        'blood-test-report' => 'tbl_blood_test_reports',
+        'prescription' => 'tbl_prescriptions',
+        'medical-report' => 'tbl_medical_reports',
+        'insurance-document' => 'tbl_insurance_documents',
+    ];
+    
+    return $map[$documentType] ?? null;
+}
+
+private function getContentType($extension)
+{
+    $types = [
+        'pdf' => 'application/pdf',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'txt' => 'text/plain',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    
+    return $types[strtolower($extension)] ?? 'application/octet-stream';
+}
+
 
 
 

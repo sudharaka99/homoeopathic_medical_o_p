@@ -118,10 +118,13 @@ class HomeController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
             
-            // If you want to use Query Builder instead of Eloquent
-            // $user = DB::table('users')->where('id', Auth::id())->first();
+            $contactMessages = DB::table('tbl_contacts_us')
+                ->where('email', $user->email)
+                ->orderBy('created_at', 'desc')
+                ->get();
+      
             
-            return view('front.contact-us', compact('user'));
+            return view('front.contact-us', compact('user','contactMessages'));
         }
         
         return view('front.contact-us', ['user' => null]);

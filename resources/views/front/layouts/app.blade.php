@@ -62,7 +62,9 @@
 						@endif
 					</li>
 					<li class="nav-item">
+						@if(Auth::check() && Auth::user()->role !== 'admin')
 						<a class="nav-link" aria-current="page" href="{{ route('contact') }}">Contact Us</a>
+						@endif
 					</li>
 														
 
@@ -83,17 +85,6 @@
 						<a class="btn btn-outline-primary me-2" href="{{ route('doctor.profile') }}" type="submit">Account</a>
 					@else
 						<a class="btn btn-outline-primary me-2" href="{{ route('account.profile') }}" type="submit">Account</a>
-					@endif
-
-
-
-					<!-- Post a Job Button based on the user role -->
-					@if($userRole === 'admin')
-						<a class="btn btn-primary" href="" type="submit">Post a Job</a>
-					@elseif($userRole === 'doctor')
-						<a class="btn btn-primary" href="" type="submit">Post a Job</a>
-					@else
-						{{-- <a class="btn btn-primary" href="{{ route('account.createJob') }}" type="submit">Post a Job</a> --}}
 					@endif
 				@endif
 			
