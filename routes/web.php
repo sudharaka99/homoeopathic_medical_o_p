@@ -128,7 +128,7 @@ Route::get('/medical-documents/{documentType}/{filename}/download', [PatientCont
 Route::delete('/medical-documents/delete', [PatientController::class, 'deleteDocument'])->name('account.medicalInfo.deleteDocument');
 
 
-Route::post('/book-appointment', [PatientController::class, 'storeAppointment'])->name('front.bookAppointment');
+Route::post('/book-appointment-store', [PatientController::class, 'storeAppointment'])->name('front.bookAppointment');
 // Patient Appointment Routes
 Route::get('/my-appointments', [PatientController::class, 'myAppointments'])->name('patient.appointments');
 Route::get('/appointment-details/{id}', [PatientController::class, 'getAppointmentDetails'])->name('patient.appointment.details');
