@@ -28,16 +28,10 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                @if($patient->profile_photo_path)
-                                    <img src="{{ asset('storage/'.$patient->profile_photo_path) }}" 
-                                         alt="{{ $patient->name }}" 
-                                         class="rounded-circle me-4" 
-                                         width="80" height="80">
+                                @if(Auth::user()->image != '')
+                                    <img src="{{ asset('profile_pic/thumb/' . Auth::user()->image) }}" alt="avatar" class="rounded-circle img-fluid" style="width: 150px;">
                                 @else
-                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-4" 
-                                         style="width: 80px; height: 80px; font-size: 2rem;">
-                                        {{ substr($patient->name, 0, 1) }}
-                                    </div>
+                                    <img src="{{ asset('assets/images/avatar7.png') }}" alt="avatar" class="rounded-circle img-fluid" style="width: 150px;">
                                 @endif
                                 <div>
                                     <h3 class="mb-1">{{ $patient->name }}</h3>
@@ -323,7 +317,7 @@
                             <!-- Prescriptions -->
                             <div class="col-12 mb-4 document-section" data-type="prescription">
                                 <div class="card border-0 shadow-sm">
-                                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <div class="card-header bg-primary  d-flex justify-content-between align-items-center">
                                         <div>
                                             <h6 class="mb-0"><i class="fas fa-prescription me-2"></i>Prescriptions</h6>
                                             <small class="opacity-75" id="prescriptionsInfo"></small>
