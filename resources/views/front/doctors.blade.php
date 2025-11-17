@@ -69,7 +69,7 @@
                                         <div class="card-body text-center">
                                             <!-- Doctor Profile Image -->
                                             @if($doctor->profile_picture)
-                                                <img src="{{ asset('profile_pic/thumb/' . $doctor->profile_picture) }}" 
+                                                <img src="{{ asset('profile_pic/thumb/' . Auth::user()->image) }}"
                                                      alt="{{ $doctor->doctor_name }}'s Profile Image" 
                                                      class="img-fluid rounded-circle mb-3" 
                                                      style="width: 120px; height: 120px; object-fit: cover;">

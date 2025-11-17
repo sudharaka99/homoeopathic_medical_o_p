@@ -143,7 +143,7 @@ class PatientController extends Controller
                     'd.id',
                     'd.doctor_id',
                     'u.name as doctor_name',
-                    'u.profile_photo_path as profile_picture',
+                    'u.image as profile_picture',
                     'd.qualification',
                     'd.years_experience',
                     'd.appointment_fee as fee',

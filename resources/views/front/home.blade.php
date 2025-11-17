@@ -142,9 +142,20 @@
           <div class="col-md-4 mb-4">
             <div class="card border-0 p-3 shadow h-100">
               <div class="card-body text-center">
-                <img 
-                  src="{{ $doctor->image ? asset('storage/'.$doctor->image) : asset('assets/images/doctor.png') }}" 
-                  class="rounded-circle mb-3" width="90" height="90" alt="Doctor Image">
+@if($doctor->image)
+    <img src="{{ asset('profile_pic/thumb/' . $doctor->image) }}"
+         class="rounded-circle mb-3"
+         width="90"
+         height="90"
+         alt="Doctor Image">
+@else
+    <img src="{{ asset('assets/images/doctor.png') }}"
+         class="rounded-circle mb-3"
+         width="90"
+         height="90"
+         alt="Default Doctor Image">
+@endif
+
 
                 <h5 class="mb-1">{{ $doctor->doctor_name }}</h5>
                 <p class="text-muted mb-1">{{ $doctor->specialization_name }}</p>
@@ -191,9 +202,20 @@
           <div class="col-md-4 mb-4">
             <div class="card border-0 p-3 shadow h-100">
               <div class="card-body text-center">
-                <img 
-                  src="{{ $doctor->image ? asset('storage/'.$doctor->image) : asset('assets/images/doctor.png') }}" 
-                  class="rounded-circle mb-3" width="90" height="90" alt="Doctor Image">
+@if($doctor->image)
+    <img src="{{ asset('profile_pic/thumb/' . $doctor->image) }}"
+         class="rounded-circle mb-3"
+         width="90"
+         height="90"
+         alt="Doctor Image">
+@else
+    <img src="{{ asset('assets/images/doctor.png') }}"
+         class="rounded-circle mb-3"
+         width="90"
+         height="90"
+         alt="Default Doctor Image">
+@endif
+
 
                 <h5 class="mb-1">{{ $doctor->doctor_name }}</h5>
                 <p class="text-muted mb-1">{{ $doctor->specialization_name }}</p>
