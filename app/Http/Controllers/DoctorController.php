@@ -321,36 +321,16 @@ public function updateDoctorProfile(Request $request)
                 ->where('d.doctor_id', Auth::id())
                 ->first();
 
-            $today = now()->format('Y-m-d');
-            
-            // Get past availabilities (before today) - ALL records
-            $pastAvailabilities = DB::table('tbl_availability')
+            // Get all availabilities in a single query
+            $availabilities = DB::table('tbl_availability')
                 ->where('doctor_id', Auth::id())
-                ->where('date', '<', $today)
                 ->orderBy('date', 'desc')
-                ->orderBy('start_time_slot', 'asc')
-                ->get();
-
-            // Get today's availabilities
-            $todayAvailabilities = DB::table('tbl_availability')
-                ->where('doctor_id', Auth::id())
-                ->where('date', $today)
-                ->orderBy('start_time_slot', 'asc')
-                ->get();
-
-            // Get future availabilities (after today)
-            $futureAvailabilities = DB::table('tbl_availability')
-                ->where('doctor_id', Auth::id())
-                ->where('date', '>', $today)
-                ->orderBy('date', 'asc')
                 ->orderBy('start_time_slot', 'asc')
                 ->get();
 
             return view('front.account.doctor.addAvalability', compact(
                 'doctor', 
-                'pastAvailabilities', 
-                'todayAvailabilities', 
-                'futureAvailabilities'
+                'availabilities'
             ));
 
         } catch (\Exception $e) {
@@ -645,12 +625,12 @@ public function updateDoctorProfile(Request $request)
 
 
 
-   public function manageAppointments()
+    public function manageAppointments()
     {
         try {
             $doctorId = Auth::id();
             
-            // Get doctor's appointments with patient details
+            // Get all doctor's appointments with patient details
             $appointments = DB::table('tbl_doctor_appointment as da')
                 ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
                 ->join('users as u', 'da.user_id', '=', 'u.id')
@@ -678,19 +658,7 @@ public function updateDoctorProfile(Request $request)
                 ->orderBy('da.start_time', 'desc')
                 ->get();
 
-            // Group appointments by status
-            $pendingAppointments = $appointments->where('status', 'pending');
-            $confirmedAppointments = $appointments->where('status', 'confirmed');
-            $completedAppointments = $appointments->where('status', 'completed');
-            $cancelledAppointments = $appointments->where('status', 'cancelled');
-
-            return view('front.account.doctor.manage-appointment', compact(
-                'pendingAppointments',
-                'confirmedAppointments', 
-                'completedAppointments',
-                'cancelledAppointments',
-                'appointments'
-            ));
+            return view('front.account.doctor.manage-appointment', compact('appointments'));
 
         } catch (\Exception $e) {
             Log::error('Error fetching doctor appointments: ' . $e->getMessage());
@@ -815,7 +783,7 @@ public function myPatients(Request $request)
             'u.name as patient_name',
             'u.email as patient_email',
             'u.mobile as patient_phone',
-            'u.profile_photo_path as patient_photo',
+            'u.image as patient_photo',
             'm.medical_history',
             'm.current_medications',
             'm.allergies',
@@ -864,21 +832,20 @@ public function patientMedicalDetails($patientId)
     }
 
     // Verify that this doctor has appointments with this patient
-    // Use tbl_doctor.id for the doctor_id in appointments
     $hasAccess = DB::table('tbl_doctor_appointment')
-        ->where('doctor_id', $doctorRecord->id) // Use tbl_doctor.id here
+        ->where('doctor_id', $doctorRecord->id)
         ->where('user_id', $patientId)
         ->whereIn('status', ['confirmed', 'completed'])
         ->exists();
 
     if (!$hasAccess) {
-        abort(403, 'You do not have access to this patient\'s medical information. You need confirmed or completed appointments with this patient.');
+        abort(403, 'You do not have access to this patient\'s medical information.');
     }
 
-    // Get patient basic info
+    // Get patient basic info - MAKE SURE TO SELECT 'image' FIELD
     $patient = DB::table('users')
         ->where('id', $patientId)
-        ->select('id', 'name', 'email', 'mobile as phone', 'profile_photo_path') // Changed 'phone' to 'mobile'
+        ->select('id', 'name', 'email', 'mobile as phone', 'image') // Added 'image' here
         ->first();
 
     if (!$patient) {
@@ -932,7 +899,7 @@ public function patientMedicalDetails($patientId)
 
     // Get appointment history with this doctor
     $appointments = DB::table('tbl_doctor_appointment')
-        ->where('doctor_id', $doctorRecord->id) // Use tbl_doctor.id here
+        ->where('doctor_id', $doctorRecord->id)
         ->where('user_id', $patientId)
         ->orderBy('appointment_date', 'desc')
         ->get();
@@ -947,6 +914,7 @@ public function patientMedicalDetails($patientId)
         'appointments'
     ));
 }
+
 
 public function viewPatientDocument($patientId, $documentType, $id)
 {

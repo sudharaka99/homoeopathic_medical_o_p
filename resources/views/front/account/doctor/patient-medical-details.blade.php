@@ -28,12 +28,12 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                @if(Auth::user()->image != '')
-                                    <img src="{{ asset('profile_pic/thumb/' . Auth::user()->image) }}" alt="avatar" class="rounded-circle img-fluid" style="width: 150px;">
+                                @if($patient->image != '')
+                                    <img src="{{ asset('profile_pic/thumb/' . $patient->image) }}" alt="{{ $patient->name }}" class="rounded-circle img-fluid" style="width: 150px; height: 150px; object-fit: cover;">
                                 @else
-                                    <img src="{{ asset('assets/images/avatar7.png') }}" alt="avatar" class="rounded-circle img-fluid" style="width: 150px;">
+                                    <img src="{{ asset('assets/images/avatar7.png') }}" alt="{{ $patient->name }}" class="rounded-circle img-fluid" style="width: 150px; height: 150px; object-fit: cover;">
                                 @endif
-                                <div>
+                                <div class="ms-4">
                                     <h3 class="mb-1">{{ $patient->name }}</h3>
                                     <p class="text-muted mb-1">
                                         <i class="fas fa-envelope me-2"></i>{{ $patient->email }}
@@ -172,24 +172,6 @@
                                         <h6 class="mb-0"><i class="fas fa-tint me-2"></i>Blood Test Results</h6>
                                     </div>
                                     <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-md-3 text-center">
-                                                <h6 class="text-primary">Hemoglobin</h6>
-                                                <p class="fs-5">{{ $medicalInfo->hemoglobin ?? 'N/A' }}</p>
-                                            </div>
-                                            <div class="col-md-3 text-center">
-                                                <h6 class="text-primary">RBC Count</h6>
-                                                <p class="fs-5">{{ $medicalInfo->rbc_count ?? 'N/A' }}</p>
-                                            </div>
-                                            <div class="col-md-3 text-center">
-                                                <h6 class="text-primary">WBC Count</h6>
-                                                <p class="fs-5">{{ $medicalInfo->wbc_count ?? 'N/A' }}</p>
-                                            </div>
-                                            <div class="col-md-3 text-center">
-                                                <h6 class="text-primary">Platelet Count</h6>
-                                                <p class="fs-5">{{ $medicalInfo->platelet_count ?? 'N/A' }}</p>
-                                            </div>
-                                        </div>
                                         <div class="row mt-3">
                                             <div class="col-md-6 text-center">
                                                 <h6 class="text-primary">Blood Sugar</h6>
