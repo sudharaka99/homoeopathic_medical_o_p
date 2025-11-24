@@ -14,6 +14,7 @@ use Stripe\PaymentIntent;
 use Stripe\Exception\ApiErrorException;
 use App\Providers\Services\ZoomService;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Http;
 
 use App\Models\User;
 
@@ -1379,7 +1380,7 @@ class PatientController extends Controller
 ///////////////////////////////////////// Start zoom integration ////////////////////////////////////////
 
 
-    public function createZoomMeeting($appointmentId)
+public function createZoomMeeting($appointmentId)
     {
         try {
             DB::beginTransaction();
@@ -1478,16 +1479,18 @@ class PatientController extends Controller
                 return redirect()->back()->with('error', 'Appointment not found or not eligible for meeting.');
             }
 
-            // If no meeting exists, create one
-            if (!$appointment->zoom_meeting_id) {
-                $meetingResponse = $this->createZoomMeeting($appointmentId);
+            // If no meeting exists, create one using direct method
+            if (!$appointment->zoom_meeting_id || empty($appointment->zoom_join_url)) {
+                $meetingResult = $this->createZoomMeetingDirect($appointmentId);
                 
-                if ($meetingResponse->getData()->success) {
-                    $appointment->zoom_join_url = $meetingResponse->getData()->meeting->join_url;
-                    $appointment->zoom_meeting_password = $meetingResponse->getData()->meeting->password;
-                } else {
-                    return redirect()->back()->with('error', 'Failed to create meeting: ' . $meetingResponse->getData()->message);
+                if (!$meetingResult['success']) {
+                    return redirect()->back()->with('error', 'Failed to create meeting: ' . $meetingResult['message']);
                 }
+                
+                // Refresh appointment to get meeting details
+                $appointment = DB::table('tbl_doctor_appointment')
+                    ->where('id', $appointmentId)
+                    ->first();
             }
 
             // Verify meeting time (allow joining 10 minutes before and 30 minutes after)
@@ -1501,6 +1504,10 @@ class PatientController extends Controller
                 return redirect()->back()->with('error', 'Meeting can only be joined 10 minutes before and up to 30 minutes after the scheduled time.');
             }
 
+            if (empty($appointment->zoom_join_url)) {
+                return redirect()->back()->with('error', 'Meeting link not available.');
+            }
+
             // Redirect to Zoom meeting
             return redirect()->away($appointment->zoom_join_url);
 
@@ -1509,6 +1516,66 @@ class PatientController extends Controller
             return redirect()->back()->with('error', 'Failed to join meeting: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Helper method to create meeting without JSON response
+     */
+    private function createZoomMeetingDirect($appointmentId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $appointment = DB::table('tbl_doctor_appointment as da')
+                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+                ->join('users as doctor_user', 'd.doctor_id', '=', 'doctor_user.id')
+                ->join('users as patient_user', 'da.user_id', '=', 'patient_user.id')
+                ->where('da.id', $appointmentId)
+                ->where('da.user_id', Auth::id())
+                ->where('da.status', 'confirmed')
+                ->where('da.payment_status', 'paid')
+                ->select('da.*', 'doctor_user.name as doctor_name', 'patient_user.name as patient_name')
+                ->first();
+
+            if (!$appointment) {
+                return ['success' => false, 'message' => 'Appointment not found'];
+            }
+
+            if ($appointment->zoom_meeting_id) {
+                return ['success' => true];
+            }
+
+            $zoomService = new ZoomService();
+            
+            $doctor = (object) ['name' => $appointment->doctor_name ];
+            $patient = (object) ['name' => $appointment->patient_name ];
+
+            $meeting = $zoomService->createMeeting($appointment, $doctor, $patient);
+
+            // Update appointment with Zoom meeting details
+            DB::table('tbl_doctor_appointment')
+                ->where('id', $appointmentId)
+                ->update([
+                    'zoom_meeting_id' => $meeting['id'],
+                    'zoom_meeting_password' => $meeting['password'],
+                    'zoom_join_url' => $meeting['join_url'],
+                    'zoom_start_url' => $meeting['start_url'],
+                    'meeting_created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            DB::commit();
+
+            return ['success' => true];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Direct Zoom Meeting Creation Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+   
+
 }
 
 

@@ -95,6 +95,7 @@
                                         <th>Date & Time</th>
                                         <th>Token</th>
                                         <th>Fee</th>
+                                        <th>Payment</th>
                                         <th>Status</th>
                                         <th>Booked On</th>
                                         <th class="text-center">Actions</th>
@@ -106,6 +107,13 @@
                                             $appointmentDate = \Carbon\Carbon::parse($appointment->appointment_date);
                                             $isToday = $appointmentDate->isToday();
                                             $isUpcoming = $appointmentDate->isFuture();
+                                            $isPast = $appointmentDate->isPast();
+                                            
+                                            // Check if meeting can be joined - ONLY WHEN PAID
+                                            $canJoinMeeting = $appointment->status == 'confirmed' && 
+                                                             $appointment->payment_status == 'paid' &&
+                                                             !empty($appointment->zoom_join_url) &&
+                                                             ($isToday || $isPast);
                                         @endphp
                                         <tr data-date="{{ $appointment->appointment_date }}" data-status="{{ $appointment->status }}" data-patient="{{ strtolower($appointment->patient_name) }} {{ strtolower($appointment->patient_email) }}">
                                             <td>{{ $appointment->id }}</td>
@@ -122,6 +130,8 @@
                                                         <span class="badge bg-info ms-1">Today</span>
                                                     @elseif($isUpcoming)
                                                         <span class="badge bg-success ms-1">Upcoming</span>
+                                                    @elseif($isPast)
+                                                        <span class="badge bg-secondary ms-1">Past</span>
                                                     @endif
                                                 </div>
                                                 <div class="text-muted small">
@@ -138,7 +148,21 @@
                                                 <strong>Rs. {{ number_format($appointment->fee, 2) }}</strong>
                                             </td>
                                             <td>
-                                                <span class="badge {{ getStatusBadgeClass($appointment->status) }}">
+                                                @if($appointment->payment_status == 'paid')
+                                                    <span class="badge bg-success">Paid</span>
+                                                    @if($appointment->payment_method)
+                                                        <br><small class="text-muted">via {{ ucfirst($appointment->payment_method) }}</small>
+                                                    @endif
+                                                @elseif($appointment->payment_status == 'pending')
+                                                    <span class="badge bg-warning text-dark">Pending</span>
+                                                @elseif($appointment->payment_status == 'failed')
+                                                    <span class="badge bg-danger">Failed</span>
+                                                @else
+                                                    <span class="badge bg-secondary">{{ ucfirst($appointment->payment_status) }}</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <span class="badge {{ $appointment->status == 'pending' ? 'bg-warning text-dark' : ($appointment->status == 'confirmed' ? 'bg-success' : ($appointment->status == 'completed' ? 'bg-info' : ($appointment->status == 'cancelled' ? 'bg-danger' : 'bg-secondary'))) }}">
                                                     {{ ucfirst($appointment->status) }}
                                                 </span>
                                             </td>
@@ -152,6 +176,17 @@
                                                             title="View Details">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
+                                                    
+                                                    <!-- ZOOM JOIN BUTTON -->
+                                                    @if($canJoinMeeting)
+                                                        <button class="btn btn-primary join-meeting-btn"
+                                                                data-appointment-id="{{ $appointment->id }}"
+                                                                data-join-url="{{ $appointment->zoom_join_url }}"
+                                                                data-meeting-id="{{ $appointment->zoom_meeting_id }}"
+                                                                title="Join Zoom Meeting">
+                                                            <i class="fas fa-video"></i>
+                                                        </button>
+                                                    @endif
                                                     
                                                     @if($appointment->status == 'pending')
                                                         <button class="btn btn-success confirm-btn"
@@ -178,7 +213,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted">No appointments found.</td>
+                                            <td colspan="9" class="text-center text-muted">No appointments found.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -215,18 +250,6 @@
 </div>
 @endsection
 
-@php
-function getStatusBadgeClass($status) {
-    $classes = [
-        'pending' => 'bg-warning text-dark',
-        'confirmed' => 'bg-success',
-        'completed' => 'bg-info',
-        'cancelled' => 'bg-danger'
-    ];
-    return $classes[$status] ?? 'bg-secondary';
-}
-@endphp
-
 @section('customJS')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -248,6 +271,29 @@ const tokenBadgeStyle = `
     min-width: 50px;
     text-align: center;
 }
+.btn-group .btn {
+    margin: 0 2px;
+    border-radius: 6px;
+}
+.zoom-meeting-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    padding: 20px;
+    color: white;
+    margin: 15px 0;
+}
+.zoom-link {
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 10px 15px;
+    word-break: break-all;
+    margin: 10px 0;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+.zoom-link small {
+    color: white;
+    font-family: monospace;
+}
 `;
 
 // Add styles to head
@@ -266,6 +312,46 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const appointmentId = this.dataset.appointmentId;
             loadAppointmentDetails(appointmentId);
+        });
+    });
+
+    // Join Meeting Button for Doctor
+    document.querySelectorAll('.join-meeting-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const appointmentId = this.dataset.appointmentId;
+            const joinUrl = this.dataset.joinUrl;
+            const meetingId = this.dataset.meetingId;
+            
+            Swal.fire({
+                title: 'Join Zoom Meeting?',
+                html: `
+                    <div class="text-start">
+                        <p>You are about to join the Zoom meeting for this appointment.</p>
+                        <p><strong>Meeting ID:</strong> ${meetingId}</p>
+                        <p class="text-success"><i class="fas fa-check-circle me-1"></i>Patient has paid for this consultation</p>
+                    </div>
+                `,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-video me-1"></i> Join Meeting',
+                cancelButtonText: 'Cancel',
+                showLoaderOnConfirm: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Open Zoom meeting in new tab
+                    window.open(joinUrl, '_blank', 'noopener,noreferrer');
+                    
+                    Swal.fire({
+                        title: 'Meeting Launched!',
+                        text: 'Zoom meeting has been opened in a new tab.',
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            });
         });
     });
 
@@ -295,10 +381,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Success/Error Messages
     @if(session('success'))
-        Swal.fire('Success!', '{{ session('success') }}', 'success');
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: '{{ session('success') }}',
+            timer: 3000,
+            showConfirmButton: true
+        });
     @endif
     @if(session('error'))
-        Swal.fire('Error!', '{{ session('error') }}', 'error');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: '{{ session('error') }}',
+            timer: 5000,
+            showConfirmButton: true
+        });
     @endif
 });
 
@@ -536,6 +634,58 @@ function loadAppointmentDetails(appointmentId) {
             const apt = data.appointment;
             const modalContent = document.getElementById('appointmentDetailsContent');
             
+            // Check if meeting exists and is available (only when paid)
+            const hasMeeting = apt.zoom_meeting_id && apt.zoom_join_url;
+            const canJoinMeeting = apt.status == 'confirmed' && apt.payment_status == 'paid' && hasMeeting;
+            
+            let meetingSection = '';
+            if (hasMeeting) {
+                meetingSection = `
+                    <div class="zoom-meeting-section">
+                        <h6 class="text-white mb-3"><i class="fas fa-video me-2"></i>Zoom Meeting Details</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Meeting ID:</strong> ${apt.zoom_meeting_id || 'N/A'}</p>
+                                <p class="mb-1"><strong>Password:</strong> ${apt.zoom_meeting_password || 'N/A'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Created At:</strong> ${apt.meeting_created_at ? new Date(apt.meeting_created_at).toLocaleString() : 'Not created'}</p>
+                            </div>
+                        </div>
+                        
+                        ${canJoinMeeting ? `
+                        <div class="mt-3">
+                            <p class="mb-2"><strong>Join URL:</strong></p>
+                            <div class="zoom-link">
+                                <small>${apt.zoom_join_url}</small>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-light btn-sm" onclick="window.open('${apt.zoom_join_url}', '_blank', 'noopener,noreferrer')">
+                                    <i class="fas fa-external-link-alt me-1"></i> Join Meeting
+                                </button>
+                                ${apt.zoom_start_url ? `
+                                <button class="btn btn-outline-light btn-sm ms-2" onclick="window.open('${apt.zoom_start_url}', '_blank', 'noopener,noreferrer')">
+                                    <i class="fas fa-play me-1"></i> Start Meeting
+                                </button>
+                                ` : ''}
+                                <button class="btn btn-outline-light btn-sm ms-2" onclick="copyToClipboard('${apt.zoom_join_url}')">
+                                    <i class="fas fa-copy me-1"></i> Copy Link
+                                </button>
+                            </div>
+                        </div>
+                        ` : `
+                        <div class="alert alert-warning mt-2 mb-0">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                ${apt.payment_status == 'paid' ? 'Meeting is ready. Patient can join anytime.' : 'Meeting link will be available after payment is completed.'}
+                            </small>
+                        </div>
+                        `}
+                    </div>
+                `;
+            }
+            
             modalContent.innerHTML = `
                 <div class="row">
                     <div class="col-md-6">
@@ -550,11 +700,24 @@ function loadAppointmentDetails(appointmentId) {
                         <p><strong>Token:</strong> <span class="token-badge">#${apt.token_number}</span></p>
                     </div>
                 </div>
+                
+                ${meetingSection}
+                
                 <div class="row mt-3">
                     <div class="col-md-6">
                         <h6 class="text-muted">Fee & Status</h6>
                         <p><strong>Fee:</strong> Rs. ${parseFloat(apt.fee).toLocaleString()}</p>
-                        <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(apt.status)}">${apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}</span></p>
+                        <p><strong>Payment Status:</strong> 
+                            <span class="badge ${apt.payment_status == 'paid' ? 'bg-success' : apt.payment_status == 'pending' ? 'bg-warning text-dark' : 'bg-danger'}">
+                                ${apt.payment_status.charAt(0).toUpperCase() + apt.payment_status.slice(1)}
+                            </span>
+                            ${apt.payment_method ? `<br><small class="text-muted">via ${apt.payment_method.charAt(0).toUpperCase() + apt.payment_method.slice(1)}</small>` : ''}
+                        </p>
+                        <p><strong>Appointment Status:</strong> 
+                            <span class="badge ${apt.status == 'pending' ? 'bg-warning text-dark' : apt.status == 'confirmed' ? 'bg-success' : apt.status == 'completed' ? 'bg-info' : 'bg-danger'}">
+                                ${apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                            </span>
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <h6 class="text-muted">Timestamps</h6>
@@ -591,9 +754,9 @@ function confirmAppointmentStatus(appointmentId, status, message) {
         text: message,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: getStatusButtonColor(status),
+        confirmButtonColor: status == 'confirmed' ? '#28a745' : (status == 'cancelled' ? '#dc3545' : '#007bff'),
         cancelButtonColor: '#6c757d',
-        confirmButtonText: getStatusButtonText(status),
+        confirmButtonText: status == 'confirmed' ? 'Yes, Confirm!' : (status == 'cancelled' ? 'Yes, Cancel!' : 'Yes, Complete!'),
         cancelButtonText: 'Cancel'
     }).then((result) => {
         if (result.isConfirmed) {
@@ -646,32 +809,20 @@ function updateAppointmentStatus(appointmentId, status) {
     });
 }
 
-function getStatusBadgeClass(status) {
-    const classes = {
-        'pending': 'bg-warning text-dark',
-        'confirmed': 'bg-success',
-        'completed': 'bg-info',
-        'cancelled': 'bg-danger'
-    };
-    return classes[status] || 'bg-secondary';
-}
-
-function getStatusButtonColor(status) {
-    const colors = {
-        'confirmed': '#28a745',
-        'cancelled': '#dc3545',
-        'completed': '#007bff'
-    };
-    return colors[status] || '#007bff';
-}
-
-function getStatusButtonText(status) {
-    const texts = {
-        'confirmed': 'Yes, Confirm!',
-        'cancelled': 'Yes, Cancel!',
-        'completed': 'Yes, Complete!'
-    };
-    return texts[status] || 'Yes, Update!';
+// Utility function to copy to clipboard
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: 'Meeting link copied to clipboard',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }, function(err) {
+        console.error('Could not copy text: ', err);
+        Swal.fire('Error', 'Failed to copy link', 'error');
+    });
 }
 </script>
 @endsection

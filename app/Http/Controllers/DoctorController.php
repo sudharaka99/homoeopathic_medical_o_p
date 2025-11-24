@@ -625,46 +625,95 @@ public function updateDoctorProfile(Request $request)
 
 
 
-    public function manageAppointments()
-    {
-        try {
-            $doctorId = Auth::id();
+    // public function manageAppointments()
+    // {
+    //     try {
+    //         $doctorId = Auth::id();
             
-            // Get all doctor's appointments with patient details
-            $appointments = DB::table('tbl_doctor_appointment as da')
-                ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
-                ->join('users as u', 'da.user_id', '=', 'u.id')
-                ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
-                ->where('d.doctor_id', $doctorId)
-                ->select(
-                    'da.id',
-                    'da.appointment_date',
-                    'da.start_time',
-                    'da.end_time',
-                    'da.fee',
-                    'da.token_number',
-                    'da.status',
-                    'da.notes',
-                    'da.created_at',
-                    'da.updated_at',
-                    'u.name as patient_name',
-                    'u.email as patient_email',
-                    'av.date as availability_date',
-                    'av.start_time_slot',
-                    'av.end_time_slot',
-                    'av.number_of_tokens'
-                )
-                ->orderBy('da.appointment_date', 'desc')
-                ->orderBy('da.start_time', 'desc')
-                ->get();
+    //         // Get all doctor's appointments with patient details
+    //         $appointments = DB::table('tbl_doctor_appointment as da')
+    //             ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+    //             ->join('users as u', 'da.user_id', '=', 'u.id')
+    //             ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+    //             ->where('d.doctor_id', $doctorId)
+    //             ->select(
+    //                 'da.id',
+    //                 'da.appointment_date',
+    //                 'da.start_time',
+    //                 'da.end_time',
+    //                 'da.fee',
+    //                 'da.token_number',
+    //                 'da.status',
+    //                 'da.notes',
+    //                 'da.created_at',
+    //                 'da.updated_at',
+    //                 'da.zoom_join_url',
+    //                 'u.name as patient_name',
+    //                 'u.email as patient_email',
+    //                 'av.date as availability_date',
+    //                 'av.start_time_slot',
+    //                 'av.end_time_slot',
+    //                 'av.number_of_tokens'
+    //             )
+    //             ->orderBy('da.appointment_date', 'desc')
+    //             ->orderBy('da.start_time', 'desc')
+    //             ->get();
 
-            return view('front.account.doctor.manage-appointment', compact('appointments'));
+    //         return view('front.account.doctor.manage-appointment', compact('appointments'));
 
-        } catch (\Exception $e) {
-            Log::error('Error fetching doctor appointments: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to load appointments.');
-        }
+    //     } catch (\Exception $e) {
+    //         Log::error('Error fetching doctor appointments: ' . $e->getMessage());
+    //         return redirect()->back()->with('error', 'Failed to load appointments.');
+    //     }
+    // }
+
+public function manageAppointments()
+{
+    try {
+        $doctorId = Auth::id();
+        
+        // Get all doctor's appointments with patient details
+        $appointments = DB::table('tbl_doctor_appointment as da')
+            ->join('tbl_availability as av', 'da.availability_id', '=', 'av.id')
+            ->join('users as u', 'da.user_id', '=', 'u.id')
+            ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+            ->where('d.doctor_id', $doctorId)
+            ->select(
+                'da.id',
+                'da.appointment_date',
+                'da.start_time',
+                'da.end_time',
+                'da.fee',
+                'da.token_number',
+                'da.status',
+                'da.payment_status', // REQUIRED
+                'da.payment_method', // REQUIRED
+                'da.notes',
+                'da.created_at',
+                'da.updated_at',
+                'da.zoom_meeting_id', // REQUIRED
+                'da.zoom_meeting_password', // REQUIRED
+                'da.zoom_join_url', // REQUIRED
+                'da.zoom_start_url', // REQUIRED
+                'da.meeting_created_at', // REQUIRED
+                'u.name as patient_name',
+                'u.email as patient_email',
+                'av.date as availability_date',
+                'av.start_time_slot',
+                'av.end_time_slot',
+                'av.number_of_tokens'
+            )
+            ->orderBy('da.appointment_date', 'desc')
+            ->orderBy('da.start_time', 'desc')
+            ->get();
+
+        return view('front.account.doctor.manage-appointment', compact('appointments'));
+
+    } catch (\Exception $e) {
+        Log::error('Error fetching doctor appointments: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Failed to load appointments.');
     }
+}
 
     public function updateStatus(Request $request, $id)
     {
