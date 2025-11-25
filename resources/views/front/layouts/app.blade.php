@@ -46,6 +46,8 @@
 								<a class="nav-link" href="{{ route('admin.dashboard') }}">Dashboard</a>
 							@elseif(Auth::user()->role === 'doctor')
 								<a class="nav-link" href="{{ route('doctor.dashboard') }}">Dashboard</a>
+							@elseif(Auth::user()->role === 'patient')
+								<a class="nav-link" href="{{ route('patient.dashboard') }}">Dashboard</a
 							@endif
 						@endif
 					</li>
@@ -56,11 +58,6 @@
 						@endif
 					</li>
 
-					<li class="nav-item">
-						@if(Auth::check() && Auth::user()->role === 'employee')
-							<a class="nav-link" aria-current="page" href="">Counselling</a>
-						@endif
-					</li>
 					<li class="nav-item">
 						@if(Auth::check() && Auth::user()->role !== 'admin')
 						<a class="nav-link" aria-current="page" href="{{ route('contact') }}">Contact Us</a>

@@ -64,6 +64,22 @@ Route::put('/admin/contact/{id}/status', [AdminController::class, 'updateMessage
 Route::post('/admin/contact/reply', [AdminController::class, 'replyToMessage'])->name('admin.contact.reply');
 Route::delete('/admin/contact/{id}', [AdminController::class, 'deleteMessage'])->name('admin.contact.destroy');
 
+//manage doctors
+Route::get('/admin/doctors-list', [AdminController::class, 'doctorsList'])->name('admin.doctorslist');
+Route::get('/admin/doctor/{id}/edit', [AdminController::class, 'editDoctor'])->name('admin.doctor.edit');
+Route::put('/admin/doctor/{id}', [AdminController::class, 'updateDoctor'])->name('admin.doctor.update');
+Route::delete('/admin/doctor/{id}', [AdminController::class, 'deleteDoctor'])->name('admin.doctor.delete');
+Route::post('/admin/doctor/{id}/toggle-status', [AdminController::class, 'toggleDoctorStatus'])->name('admin.doctor.toggle-status');
+
+//////appointment
+Route::get('/admin/appointments', [AdminController::class, 'allAppointment'])->name('admin.appointments');
+
+////// manage patient
+Route::get('/admin/patients', [AdminController::class, 'managePatientList'])->name('admin.patients');
+Route::get('/admin/patients/{id}/edit', [AdminController::class, 'managePatientListEdit'])->name('admin.patients.edit');
+Route::put('/admin/patients/{id}', [AdminController::class, 'managePatientListUpdate'])->name('admin.patients.update');
+Route::delete('/admin/patients/{id}', [AdminController::class, 'managePatientListDestroy'])->name('admin.patients.destroy');
+
 //doctor
 Route::get('/doctor/dashboard', [DoctorController::class, 'index'])->name('doctor.dashboard');
 Route::get('/doctor/profile', [DoctorController::class, 'profile'])->name('doctor.profile');

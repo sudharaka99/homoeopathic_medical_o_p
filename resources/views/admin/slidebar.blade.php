@@ -27,6 +27,16 @@
                             <a href="">Manage Appointments</a>
                         </li> --}}
                         <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <a href="{{ route('admin.doctorslist') }}">Manage Doctors</a>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <a href="{{ route('admin.patients') }}">Manage Patients</a>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <a href="{{ route('admin.appointments') }}">All Appointments</a>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-3">
                             <a href="{{ route('admin.user-feedback') }}">User Feedback</a>
                         </li>   
                         <li class="list-group-item d-flex justify-content-between align-items-center p-3">

@@ -20,25 +20,80 @@ use App\Models\User;
 
 class PatientController extends Controller
 {
-    // public function dashboard()
-    // {
-    //     return view('front.account.dashboard');
-    // }
 
-     public function dashboard()
+
+    public function dashboard()
     {
         $user = Auth::user();
 
-        // Load user’s appointments
-        // $appointments = Appointment::with('doctor')
-        //     ->where('patient_id', $user->id)
-        //     ->orderBy('appointment_date', 'desc')
-        //     ->get();
+        // Get upcoming appointments (next 7 days)
+        $appointments = DB::table('tbl_doctor_appointment as da')
+            ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+            ->join('users as u', 'd.doctor_id', '=', 'u.id')
+            ->where('da.user_id', $user->id)
+            ->where('da.appointment_date', '>=', now()->format('Y-m-d'))
+            ->whereIn('da.status', ['pending', 'confirmed'])
+            ->select(
+                'da.id',
+                'da.appointment_date',
+                'da.start_time',
+                'da.end_time',
+                'da.fee',
+                'da.status',
+                'da.payment_status',
+                'da.token_number',
+                'da.zoom_meeting_id',
+                'da.zoom_join_url',
+                'u.name as doctor_name',
+                'd.clinic_name'
+            )
+            ->orderBy('da.appointment_date', 'asc')
+            ->orderBy('da.start_time', 'asc')
+            ->get();
 
-        // Recently consulted doctors (based on appointments)
-        // $recentDoctors = Doctor::whereIn('id', $appointments->pluck('doctor_id')->unique())->get();
+        // Get recent doctors (from appointments in last 30 days)
+        $recentDoctors = DB::table('tbl_doctor_appointment as da')
+            ->join('tbl_doctor as d', 'da.doctor_id', '=', 'd.id')
+            ->join('users as u', 'd.doctor_id', '=', 'u.id')
+            ->where('da.user_id', $user->id)
+            ->where('da.created_at', '>=', now()->subDays(30))
+            ->select(
+                'd.id',
+                'u.name as doctor_name',
+                'u.image as profile_picture',
+                'd.specialization'
+            )
+            ->distinct()
+            ->orderBy('da.created_at', 'desc')
+            ->get();
 
-        return view('front.account.dashboard');
+        // Counts for stats
+        $upcomingAppointmentsCount = $appointments->count();
+        
+        $doctorsCount = DB::table('tbl_doctor_appointment')
+            ->where('user_id', $user->id)
+            ->distinct('doctor_id')
+            ->count('doctor_id');
+        
+        $savedDoctorsCount = DB::table('tbl_saved_doctors')
+            ->where('user_id', $user->id)
+            ->count();
+
+        // Count medical documents from all tables
+        $medicalDocumentsCount = 
+            DB::table('tbl_blood_test_reports')->where('user_id', $user->id)->count() +
+            DB::table('tbl_prescriptions')->where('user_id', $user->id)->count() +
+            DB::table('tbl_medical_reports')->where('user_id', $user->id)->count() +
+            DB::table('tbl_insurance_documents')->where('user_id', $user->id)->count();
+
+        return view('front.account.dashboard', compact(
+            'appointments', 
+            'recentDoctors',
+            'upcomingAppointmentsCount',
+            'doctorsCount',
+            'savedDoctorsCount',
+            'medicalDocumentsCount'
+        ));
     }
 
     public function saveDoctor(Request $request)
