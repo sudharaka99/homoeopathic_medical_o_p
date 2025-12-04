@@ -233,52 +233,56 @@
                             </div>
                         </div>
 
-                        <!-- Recent Patients -->
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-white py-3">
-                                <h5 class="mb-0 fw-bold text-info">
-                                    <i class="fas fa-user-injured me-2"></i>Recent Patients
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                @if(isset($recentPatients) && $recentPatients->count() > 0)
-                                    @foreach($recentPatients->take(4) as $patient)
-                                        <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
-                                            @if($patient->patient_photo)
-                                                <img src="{{ asset('profile_pic/thumb/' . $patient->patient_photo) }}" 
-                                                     class="rounded-circle me-3 object-fit-cover" width="45" height="45" alt="{{ $patient->patient_name }}">
-                                            @else
-                                                <img src="{{ asset('front/img/patient-default.jpg') }}" 
-                                                     class="rounded-circle me-3 object-fit-cover" width="45" height="45" alt="{{ $patient->patient_name }}">
-                                            @endif
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1 fw-bold text-dark">{{ $patient->patient_name }}</h6>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-calendar text-success me-1"></i>
-                                                    {{ \Carbon\Carbon::parse($patient->last_appointment)->format('M j') }}
-                                                </small>
-                                            </div>
-                                            <a href="{{ route('doctor.patient.medical-details', $patient->patient_id) }}" class="btn btn-sm btn-outline-info" title="View Medical Details">
-                                                <i class="fas fa-file-medical"></i>
-                                            </a>
-                                        </div>
-                                    @endforeach
-                                    <div class="text-center mt-3">
-                                        <a href="{{ route('doctor.patients') }}" class="btn btn-sm btn-outline-primary w-100">
-                                            <i class="fas fa-users me-1"></i>View All Patients
-                                        </a>
-                                    </div>
-                                @else
-                                    <div class="text-center py-4">
-                                        <div class="text-muted mb-2">
-                                            <i class="fas fa-user-injured fa-2x text-info"></i>
-                                        </div>
-                                        <h6 class="text-muted">No recent patients</h6>
-                                        <p class="text-muted small">Patients will appear here after appointments</p>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
+<!-- Recent Patients -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold text-info">
+            <i class="fas fa-user-injured me-2"></i>Recent Patients
+        </h5>
+    </div>
+    <div class="card-body">
+        @if(isset($recentPatients) && $recentPatients->count() > 0)
+            @foreach($recentPatients->take(4) as $patient)
+                <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                    <div class="flex-shrink-0">
+                        @if($patient->patient_photo)
+                            <img src="{{ asset('profile_pic/thumb/' . $patient->patient_photo) }}"
+                                 class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
+                        @else
+                            <img src="{{ asset('assets/images/avatar7.png') }}"
+                                 class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
+                        @endif
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-1 fw-bold text-dark small">{{ $patient->patient_name }}</h6>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar text-success me-1"></i>
+                            {{ \Carbon\Carbon::parse($patient->last_appointment)->format('M j') }}
+                        </small>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <a href="{{ route('doctor.patient.medical-details', $patient->patient_id) }}" class="btn btn-sm btn-outline-info p-1" title="View Medical Details" style="width: 28px; height: 28px;">
+                            <i class="fas fa-file-medical" style="font-size: 0.7rem;"></i>
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+            <div class="text-center mt-3">
+                <a href="{{ route('doctor.patients') }}" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="fas fa-users me-1"></i>View All Patients
+                </a>
+            </div>
+        @else
+            <div class="text-center py-4">
+                <div class="text-muted mb-2">
+                    <i class="fas fa-user-injured fa-2x text-info"></i>
+                </div>
+                <h6 class="text-muted">No recent patients</h6>
+                <p class="text-muted small">Patients will appear here after appointments</p>
+            </div>
+        @endif
+    </div>
+</div>
                     </div>
                 </div>
 

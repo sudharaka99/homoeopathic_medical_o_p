@@ -263,14 +263,7 @@
                                                     <i class="fas fa-stethoscope text-success me-1"></i>{{ $doctor->specialization_name ?? 'General Practitioner' }}
                                                 </small>
                                             </div>
-                                            {{-- <div class="btn-group">
-                                                <a href="{{ route('doctor.show', $doctor->id) }}" class="btn btn-sm btn-outline-info" title="View Profile">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('patient.bookAppointment', $doctor->user_id) }}" class="btn btn-sm btn-primary" title="Book Appointment">
-                                                    <i class="fas fa-calendar-plus"></i>
-                                                </a>
-                                            </div> --}}
+
                                         </div>
                                     @endforeach
                                     <div class="text-center mt-3">
