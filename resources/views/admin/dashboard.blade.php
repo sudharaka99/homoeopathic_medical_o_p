@@ -15,7 +15,7 @@
         </div>
         <div class="row">
             <div class="col-lg-3">
-                @include('admin.slidebar')
+                {{-- @include('admin.slidebar') --}}
             </div>
             <div class="col-lg-9">
                 @include('front.message')

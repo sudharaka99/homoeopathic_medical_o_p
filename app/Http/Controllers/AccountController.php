@@ -29,7 +29,10 @@ class AccountController extends Controller
     }
 
 
-    
+    public function login()
+    {
+        return view('front.account.login');
+    }
 
     public function authenticate(Request $request)
     {
